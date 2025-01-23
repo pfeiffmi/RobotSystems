@@ -86,29 +86,30 @@ class fileDB(object):
 		:return: the value of the arguement
 		:rtype: str
 		"""
-		try:
-			conf = open(self.db,'r')
-			lines=conf.readlines()
-			conf.close()
-			file_len=len(lines)-1
-			flag = False
-			# Find the arguement and set the value
-			for i in range(file_len):
-				if lines[i][0] != '#':
-					if lines[i].split('=')[0].strip() == name:
-						value = lines[i].split('=')[1].replace(' ', '').strip()
-						flag = True
-			if flag:
-				return value
-			else:
-				return default_value
-		except FileNotFoundError:
-			#conf = open(self.db,'w')
-			#conf.write("")
-			#conf.close()
-			return "0" #default_value
-		except :
-			return default_value
+		return default_value
+		#try:
+		#	conf = open(self.db,'r')
+		#	lines=conf.readlines()
+		#	conf.close()
+		#	file_len=len(lines)-1
+		#	flag = False
+		#	# Find the arguement and set the value
+		#	for i in range(file_len):
+		#		if lines[i][0] != '#':
+		#			if lines[i].split('=')[0].strip() == name:
+		#				value = lines[i].split('=')[1].replace(' ', '').strip()
+		#				flag = True
+		#	if flag:
+		#		return value
+		#	else:
+		#		return default_value
+		#except FileNotFoundError:
+		#	conf = open(self.db,'w')
+		#	conf.write("")
+		#	conf.close()
+		#	return "0"
+		#except :
+		#	return default_value
 	
 	def set(self, name, value):
 		"""

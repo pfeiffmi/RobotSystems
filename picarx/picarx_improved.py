@@ -157,12 +157,15 @@ class Picarx(object):
         # if speed != 0:
         #    speed = int(speed /2 ) + 50
         speed = speed - self.cali_speed_value[motor]
-        if direction < 0:
-            self.motor_direction_pins[motor].high()
-            self.motor_speed_pins[motor].pulse_width_percent(speed)
+        if(on_robot):
+            if direction < 0:
+                self.motor_direction_pins[motor].high()
+                self.motor_speed_pins[motor].pulse_width_percent(speed)
+            else:
+                self.motor_direction_pins[motor].low()
+                self.motor_speed_pins[motor].pulse_width_percent(speed)
         else:
-            self.motor_direction_pins[motor].low()
-            self.motor_speed_pins[motor].pulse_width_percent(speed)
+            logging.debug(f"Setting motor speed: motor({motor}, {speed})")
 
 
     # @log_on_start(logging.DEBUG, "motor_speed_calibration: Message when function starts")
@@ -272,36 +275,20 @@ class Picarx(object):
     # @log_on_end(logging.DEBUG, "Message when function ends successfully: None")
     def forward(self, speed):
         current_angle = self.dir_current_angle
-        if(on_robot):
-            if current_angle != 0:
-                abs_current_angle = abs(current_angle)
-                if abs_current_angle > self.DIR_MAX:
-                    abs_current_angle = self.DIR_MAX
-                power_scale = (100 - abs_current_angle) / 100.0
-                if (current_angle / abs_current_angle) > 0:
-                    self.set_motor_speed(1, 1*speed * power_scale)
-                    self.set_motor_speed(2, -speed) 
-                else:
-                    self.set_motor_speed(1, speed)
-                    self.set_motor_speed(2, -1*speed * power_scale)
+        if current_angle != 0:
+            abs_current_angle = abs(current_angle)
+            if abs_current_angle > self.DIR_MAX:
+                abs_current_angle = self.DIR_MAX
+            power_scale = (100 - abs_current_angle) / 100.0
+            if (current_angle / abs_current_angle) > 0:
+                self.set_motor_speed(1, 1*speed * power_scale)
+                self.set_motor_speed(2, -speed) 
             else:
                 self.set_motor_speed(1, speed)
-                self.set_motor_speed(2, -1*speed)
+                self.set_motor_speed(2, -1*speed * power_scale)
         else:
-            if current_angle != 0:
-                abs_current_angle = abs(current_angle)
-                if abs_current_angle > self.DIR_MAX:
-                    abs_current_angle = self.DIR_MAX
-                power_scale = (100 - abs_current_angle) / 100.0
-                if (current_angle / abs_current_angle) > 0:
-                    logging.debug(f"motor({1}, {1*speed * power_scale})")
-                    logging.debug(f"motor({2}, {-speed})")
-                else:
-                    logging.debug(f"motor({1}, {speed})")
-                    logging.debug(f"motor({2}, {-1*speed * power_scale})")
-            else:
-                logging.debug(f"motor({1}, {speed})")
-                logging.debug(f"motor({2}, {-1*speed})")
+            self.set_motor_speed(1, speed)
+            self.set_motor_speed(2, -1*speed)
 
 
     # @log_on_start(logging.DEBUG, "stop: Message when function starts")
