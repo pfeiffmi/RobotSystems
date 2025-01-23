@@ -4,6 +4,8 @@ import math
 
 import sys
 
+import atexit
+
 path = os.path.dirname(os.path.abspath(__file__))
 path = os.path.join(path, "..")
 sys.path.append(path)
@@ -124,6 +126,14 @@ class Picarx(object):
         # --------- ultrasonic init ---------
         trig, echo= ultrasonic_pins
         self.ultrasonic = Ultrasonic(Pin(trig), Pin(echo, mode=Pin.IN, pull=Pin.PULL_DOWN))
+
+        # --------- Exit command -------------
+        if(on_robot):
+            atexit.register(self.set_motor_speed, 1, 0)
+            atexit.register(self.set_motor_speed, 2, 0)
+        else:
+            atexit.register(logging.debug, f"setting_motor_speed: motor({1}, {0})")
+            atexit.register(logging.debug, f"setting_motor_speed: motor({2}, {0})")
         
 
     # @log_on_start(logging.DEBUG, "set_motor_speed: Message when function starts")
@@ -143,9 +153,9 @@ class Picarx(object):
         elif speed < 0:
             direction = -1 * self.cali_dir_value[motor]
         speed = abs(speed)
-        # print(f"direction: {direction}, speed: {speed}")
-        if speed != 0:
-            speed = int(speed /2 ) + 50
+        # Remove speed scaling (commented code below)
+        # if speed != 0:
+        #    speed = int(speed /2 ) + 50
         speed = speed - self.cali_speed_value[motor]
         if direction < 0:
             self.motor_direction_pins[motor].high()
