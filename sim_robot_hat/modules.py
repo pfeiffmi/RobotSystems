@@ -290,12 +290,12 @@ class Grayscale_Module(object):
         :return: reference value
         :rtype: list
         """
-        if ref is not None:
-            if isinstance(ref, list) and len(ref) == 3:
-                self._reference = ref
-            else:
-                raise TypeError("ref parameter must be 1*3 list.")
-        return self._reference
+        #if ref is not None:
+        #    if isinstance(ref, list) and len(ref) == 3:
+        #        self._reference = ref
+        #    else:
+        #        raise TypeError("ref parameter must be 1*3 list.")
+        return self.REFERENCE_DEFAULT
 
     def read_status(self, datas: list = None) -> list:
         """

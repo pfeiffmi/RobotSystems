@@ -12,7 +12,15 @@
         and the background gray value.
 
 '''
-from picarx import Picarx
+import sys
+import os
+
+path = os.path.dirname(os.path.abspath(__file__))
+path = os.path.join(path, "..", "picarx")
+print(path)
+sys.path.append(path)
+
+from picarx_improved import Picarx
 from time import sleep
 
 px = Picarx()

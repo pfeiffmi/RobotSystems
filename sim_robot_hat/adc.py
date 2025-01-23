@@ -49,9 +49,9 @@ class ADC(I2C):
         msb, lsb = super().read(2)
 
         # Combine MSB and LSB
-        value = (msb << 8) + lsb
-        self._debug(f"Read value: {value}")
-        return value
+        # value = (msb << 8) + lsb
+        # self._debug(f"Read value: {value}")
+        return 0 #value
 
     def read_voltage(self):
         """
