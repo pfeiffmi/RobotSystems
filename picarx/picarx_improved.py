@@ -250,6 +250,11 @@ class Picarx(object):
         self.set_motor_speed(1, speed)
         self.set_motor_speed(2, speed)
 
+    def generate_power_scale_value(self, turning_angle):
+        turning_angle_deg = turning_angle*(180.0/math.pi)
+        power_scale = math.cos(turning_angle_deg)
+        return(power_scale)
+
 
     # @log_on_start(logging.DEBUG, "backward: Message when function starts")
     # @log_on_end(logging.DEBUG, "Message when function ends successfully: None")
@@ -259,7 +264,7 @@ class Picarx(object):
             abs_current_angle = abs(current_angle)
             if abs_current_angle > self.DIR_MAX:
                 abs_current_angle = self.DIR_MAX
-            power_scale = (100 - abs_current_angle) / 100.0 
+            power_scale = self.generate_power_scale_value(turning_angle=abs_current_angle)
             if (current_angle / abs_current_angle) > 0:
                 self.set_motor_speed(1, -1*speed)
                 self.set_motor_speed(2, speed * power_scale)
@@ -279,7 +284,8 @@ class Picarx(object):
             abs_current_angle = abs(current_angle)
             if abs_current_angle > self.DIR_MAX:
                 abs_current_angle = self.DIR_MAX
-            power_scale = (100 - abs_current_angle) / 100.0
+            #power_scale = (100 - abs_current_angle) / 100.0
+            power_scale = self.generate_power_scale_value(turning_angle=abs_current_angle)
             if (current_angle / abs_current_angle) > 0:
                 self.set_motor_speed(1, 1*speed * power_scale)
                 self.set_motor_speed(2, -speed) 
