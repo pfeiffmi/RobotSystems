@@ -23,7 +23,9 @@ except ImportError:
     from sim_robot_hat import Grayscale_Module, Ultrasonic
     #from sim_robot_hat.utils import reset_mcu, run_command
     on_robot = False
-    
+
+import picarx_tests as tests
+
 import logging
 from logdecorator import log_on_start, log_on_end, log_on_error
 import atexit
@@ -128,12 +130,8 @@ class Picarx(object):
         self.ultrasonic = Ultrasonic(Pin(trig), Pin(echo, mode=Pin.IN, pull=Pin.PULL_DOWN))
 
         # --------- Exit command -------------
-        if(on_robot):
-            atexit.register(self.set_motor_speed, 1, 0)
-            atexit.register(self.set_motor_speed, 2, 0)
-        else:
-            atexit.register(logging.debug, f"setting_motor_speed: motor({1}, {0})")
-            atexit.register(logging.debug, f"setting_motor_speed: motor({2}, {0})")
+        atexit.register(self.set_motor_speed, 1, 0)
+        atexit.register(self.set_motor_speed, 2, 0)
         
 
     # @log_on_start(logging.DEBUG, "set_motor_speed: Message when function starts")
@@ -250,9 +248,12 @@ class Picarx(object):
         self.set_motor_speed(1, speed)
         self.set_motor_speed(2, speed)
 
+
+    # @log_on_start(logging.DEBUG, "generate_power_scale_value: Message when function starts")
+    # @log_on_end(logging.DEBUG, "Message when function ends successfully: None")
     def generate_power_scale_value(self, turning_angle):
-        turning_angle_deg = turning_angle*(180.0/math.pi)
-        power_scale = math.cos(turning_angle_deg)
+        turning_angle_rad = turning_angle*(math.pi/180.0)
+        power_scale = (math.cos(turning_angle_rad))**2
         return(power_scale)
 
 
@@ -374,6 +375,23 @@ class Picarx(object):
 
 if __name__ == "__main__":
     px = Picarx()
-    px.forward(50)
+    
+    x = 0
+    match(x):
+        case 0:
+            tests.forward_with_different_steering_angles(px)
+        case 1:
+            tests.backward_with_different_steering_angles(px)
+        case 2:
+            tests.parallel_park_left(px)
+        case 3:
+            tests.parallel_park_right(px)
+        case 4:
+            tests.k_point_turn(px, k=3)
+        case 5:
+            tests.user_control(px)
+        case _:
+            pass
+
     time.sleep(1)
     px.stop()
