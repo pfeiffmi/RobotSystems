@@ -73,11 +73,15 @@ class Picarx(object):
                 grayscale_pins:list=['A0', 'A1', 'A2'],
                 ultrasonic_pins:list=['D2','D3'],
                 config:str=CONFIG,
+                right_drift_offset=0.0
                 ):
 
         # reset robot_hat
         #utils.reset_mcu()
         #time.sleep(0.2)
+
+        # --------- drift offset ---------
+        self.drift_offset = right_drift_offset
 
         # --------- config_flie ---------
         if(on_robot):
@@ -261,6 +265,9 @@ class Picarx(object):
     # @log_on_start(logging.DEBUG, "backward: Message when function starts")
     # @log_on_end(logging.DEBUG, "Message when function ends successfully: None")
     def backward(self, speed):
+        # have the right and left motor increase and decrese respectively their speed to account for slight right drift
+        left_speed = speed*(1-self.drift_offset)
+        right_speed = speed*(1+self.drift_offset)
         current_angle = self.dir_current_angle
         if current_angle != 0:
             abs_current_angle = abs(current_angle)
@@ -268,21 +275,22 @@ class Picarx(object):
                 abs_current_angle = self.DIR_MAX
             power_scale = self.generate_power_scale_value(turning_angle=abs_current_angle)
             if (current_angle / abs_current_angle) > 0:
-                self.set_motor_speed(1, -1*speed)
-                self.set_motor_speed(2, speed * power_scale)
+                self.set_motor_speed(1, -1*left_speed)
+                self.set_motor_speed(2, right_speed * power_scale)
             else:
-                self.set_motor_speed(1, -1*speed * power_scale)
-                self.set_motor_speed(2, speed )
+                self.set_motor_speed(1, -1*left_speed * power_scale)
+                self.set_motor_speed(2, right_speed )
         else:
-            self.set_motor_speed(1, -1*speed)
-            # have the right motor increase its speed by 2% to account for slight drift
-            drift_offset = 1.02
-            self.set_motor_speed(2, speed*drift_offset)
+            self.set_motor_speed(1, -1*left_speed)
+            self.set_motor_speed(2, right_speed)
 
 
     # @log_on_start(logging.DEBUG, "forward: Message when function starts")
     # @log_on_end(logging.DEBUG, "Message when function ends successfully: None")
     def forward(self, speed):
+        # have the right and left motor increase and decrese respectively their speed to account for slight right drift
+        left_speed = speed*(1-self.drift_offset)
+        right_speed = speed*(1+self.drift_offset)
         current_angle = self.dir_current_angle
         if current_angle != 0:
             abs_current_angle = abs(current_angle)
@@ -291,16 +299,14 @@ class Picarx(object):
             #power_scale = (100 - abs_current_angle) / 100.0
             power_scale = self.generate_power_scale_value(turning_angle=abs_current_angle)
             if (current_angle / abs_current_angle) < 0:
-                self.set_motor_speed(1, 1*speed * power_scale)
-                self.set_motor_speed(2, -speed) 
+                self.set_motor_speed(1, left_speed * power_scale)
+                self.set_motor_speed(2, -1*right_speed)
             else:
-                self.set_motor_speed(1, speed)
-                self.set_motor_speed(2, -1*speed * power_scale)
+                self.set_motor_speed(1, left_speed)
+                self.set_motor_speed(2, -1*right_speed * power_scale)
         else:
-            self.set_motor_speed(1, speed)
-            # have the right motor increase its speed by 2% to account for slight drift
-            drift_offset = 1.02
-            self.set_motor_speed(2, -1*speed*drift_offset)
+            self.set_motor_speed(1, left_speed)
+            self.set_motor_speed(2, -1*right_speed)
 
 
     # @log_on_start(logging.DEBUG, "stop: Message when function starts")
@@ -381,22 +387,7 @@ class Picarx(object):
 if __name__ == "__main__":
     px = Picarx()
     
-    x = -1
-    match(x):
-        case 0:
-            tests.forward_with_different_steering_angles(px)
-        case 1:
-            tests.backward_with_different_steering_angles(px)
-        case 2:
-            tests.parallel_park_left(px)
-        case 3:
-            tests.parallel_park_right(px)
-        case 4:
-            tests.k_point_turn(px, k=3)
-        case 5:
-            tests.user_control(px)
-        case _:
-            tests.test(px)
+    tests.user_control(px)
 
     time.sleep(1)
     px.stop()
