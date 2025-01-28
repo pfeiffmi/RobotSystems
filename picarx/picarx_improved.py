@@ -22,12 +22,13 @@ except ImportError:
     from sim_robot_hat import Pin, ADC, PWM, Servo, fileDB
     from sim_robot_hat import Grayscale_Module, Ultrasonic
     #from sim_robot_hat.utils import reset_mcu, run_command
+    from logdecorator import log_on_start, log_on_end, log_on_error
     on_robot = False
 
 import picarx_tests as tests
 
 import logging
-from logdecorator import log_on_start, log_on_end, log_on_error
+
 import atexit
 
 logging_format = "%(asctime)s: %(message)s"
@@ -287,7 +288,7 @@ class Picarx(object):
                 abs_current_angle = self.DIR_MAX
             #power_scale = (100 - abs_current_angle) / 100.0
             power_scale = self.generate_power_scale_value(turning_angle=abs_current_angle)
-            if (current_angle / abs_current_angle) > 0:
+            if (current_angle / abs_current_angle) < 0:
                 self.set_motor_speed(1, 1*speed * power_scale)
                 self.set_motor_speed(2, -speed) 
             else:
@@ -376,7 +377,7 @@ class Picarx(object):
 if __name__ == "__main__":
     px = Picarx()
     
-    x = 0
+    x = -1
     match(x):
         case 0:
             tests.forward_with_different_steering_angles(px)
@@ -391,7 +392,7 @@ if __name__ == "__main__":
         case 5:
             tests.user_control(px)
         case _:
-            pass
+            tests.test(px)
 
     time.sleep(1)
     px.stop()

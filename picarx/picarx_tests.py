@@ -8,6 +8,29 @@ sys.path.append(path)
 
 from picarx_improved import Picarx
 
+def test(picar):
+    # =================
+    # ===== Tests =====
+    # =================
+    
+    # Stright-Line Speed:
+    ## ~19.12 mm/s forward speed at 50% speed [with right drift] (measured empirically)
+    ## ~19.42 mm/s backward speed at 50% speed [with right drift] (measured empirically)
+
+    # Forward Circle:
+    ## ~8.16 sec per 50% speed forward left circle at -30 degrees (measured empirically)
+    ## ~8.72 sec per 50% speed forward right circle at 30 degrees (measured empirically)
+    
+    # Backward Circle:
+    ## ~8.12 sec per 50% speed backward left circle at -30 degrees (measured empirically)
+    ## ~8.86 sec per 50% speed backward right circle at 30 degrees (measured empirically)
+    
+    picar.set_dir_servo_angle(0)
+    #picar.forward(50)
+    picar.backward(50)
+    time.sleep(10)
+    picar.set_dir_servo_angle(0)
+
 def forward_with_different_steering_angles(picar):
     for i in range(-30, 31, 1):
         print(i)
