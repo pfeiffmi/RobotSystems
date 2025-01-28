@@ -275,7 +275,9 @@ class Picarx(object):
                 self.set_motor_speed(2, speed )
         else:
             self.set_motor_speed(1, -1*speed)
-            self.set_motor_speed(2, speed)  
+            # have the right motor increase its speed by 2% to account for slight drift
+            drift_offset = 1.02
+            self.set_motor_speed(2, speed*drift_offset)
 
 
     # @log_on_start(logging.DEBUG, "forward: Message when function starts")
@@ -296,7 +298,9 @@ class Picarx(object):
                 self.set_motor_speed(2, -1*speed * power_scale)
         else:
             self.set_motor_speed(1, speed)
-            self.set_motor_speed(2, -1*speed)
+            # have the right motor increase its speed by 2% to account for slight drift
+            drift_offset = 1.02
+            self.set_motor_speed(2, -1*speed*drift_offset)
 
 
     # @log_on_start(logging.DEBUG, "stop: Message when function starts")
