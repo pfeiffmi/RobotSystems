@@ -19,19 +19,28 @@ except ImportError:
 class Sensor():
     def __init__(self):
         # set adc structure using self.syntax
-        self.adc0 = ADC(0)
-        self.adc1 = ADC(1)
-        self.adc2 = ADC(2)
+        self.adc = [ADC(0), ADC(1), ADC(2)]
 
-        self.grayscale_data = np.zeros(3)
-        
-        self.data = None
+        self.rotation_index = 0
+        self.num_samples = 3
+        self.num_sensors = 3
+        self.grayscale_data = np.zeros((self.num_samples, self.num_sensors))
+
+        for i in range(self.num_samples):
+            for j in range(self.num_sensors):
+                self.grayscale_data[i, j] = self.adc[j].read()
+
     
     def read_data(self):
         # get grayscale values
-        self.grayscale_data[0] = self.adc0.read()
-        self.grayscale_data[1] = self.adc1.read()
-        self.grayscale_data[2] = self.adc2.read()
+        for i in range(self.num_sensors):
+            self.grayscale_data[self.rotation_index, i] = self.adc[i].read()
+
+        self.rotation_index += 1
+        self.rotation_index %= self.num_samples
+
+        data = np.mean(self.grayscale_data, axis=0)
+        print("data:", data)
         # return values
-        return(self.grayscale_data)
+        return(data)
         

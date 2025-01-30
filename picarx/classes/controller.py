@@ -22,5 +22,5 @@ class Controller():
         self.turn_servo = Servo("P2")
 
     def set_turn_proportion(self, turn_proportion):
-        turn_angle = self.max_turn_angle*turn_proportion
+        turn_angle = float(self.max_turn_angle*turn_proportion)
         self.turn_servo.angle(turn_angle)
