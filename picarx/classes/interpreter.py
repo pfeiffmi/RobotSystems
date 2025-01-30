@@ -7,13 +7,18 @@ class Interpreter():
         self.is_dark_line = is_dark_line
         self.line_threshold = line_threshold
         self.sensor_with_line_last_detected = 1
+        self.prev_turn_proportion = 0
         # storage for PID controller
         self.last_error = 0
         self.sum_error = 0
 
     def interpret_sensor_reading_discrete(self, sensor_reading, threshold=20):
         if(self.has_no_significant_difference(sensor_reading)):
-            return(1-self.sensor_with_line_last_detected)
+            if(self.sensor_with_line_last_detected == 1):
+                return(self.prev_turn_proportion)
+            else:
+                self.prev_turn_proportion = 1-self.sensor_with_line_last_detected
+                return(1-self.sensor_with_line_last_detected)
 
 
     def get_turn_proportion(self, avg_difference, scaling_function, threshold):
@@ -87,7 +92,12 @@ class Interpreter():
             
     def interpret_sensor_reading_proportional(self, sensor_reading, scaling_function="linear", threshold=25):
         if(self.has_no_significant_difference(sensor_reading)):
-            return(1-self.sensor_with_line_last_detected)
+            if(self.sensor_with_line_last_detected == 1):
+                return(self.prev_turn_proportion)
+            else:
+                self.prev_turn_proportion = 1-self.sensor_with_line_last_detected
+                return(1-self.sensor_with_line_last_detected)
+        
         left_avg = np.mean(sensor_reading[0:2])
         right_avg = np.mean(sensor_reading[1:3])
 
@@ -96,12 +106,17 @@ class Interpreter():
         turn_proportion = self.get_turn_proportion(avg_difference, scaling_function=scaling_function, threshold=threshold)
         print('(', left_avg, right_avg, ')', avg_difference, turn_proportion)
         
+        self.prev_turn_proportion = turn_proportion
         return(turn_proportion)
 
     
     def interpret_sensor_reading_PID(self, sensor_reading, k_p=1.0, k_i=0.0, k_d=0.0):
         if(self.has_no_significant_difference(sensor_reading)):
-            return(1-self.sensor_with_line_last_detected)
+            if(self.sensor_with_line_last_detected == 1):
+                return(self.prev_turn_proportion)
+            else:
+                self.prev_turn_proportion = 1-self.sensor_with_line_last_detected
+                return(1-self.sensor_with_line_last_detected)
         # referencing: https://www.thorlabs.com/newgrouppage9.cfm?objectgroup_id=9013
         left_avg = np.mean(sensor_reading[0:2])
         right_avg = np.mean(sensor_reading[1:3])
@@ -119,6 +134,7 @@ class Interpreter():
         self.sum_error += error
         self.last_error = error
         
+        self.prev_turn_proportion = turn_proportion
         return(turn_proportion)
 
 
