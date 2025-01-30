@@ -8,6 +8,10 @@ sys.path.append(path)
 
 from picarx_improved import Picarx
 
+from classes.sensor import Sensor
+from classes.interpreter import Interpreter
+from classes.controller import Controller
+
 def test(picar):
     # =================
     # ===== Tests =====
@@ -173,10 +177,28 @@ def k_point_turn(picar, k):
     picar.set_dir_servo_angle(0)
     picar.stop()
 
+def line_follow(picar):
+    sensor = Sensor()
+    interpreter = Interpreter(sensitivity=1.0, is_dark_line=True)
+    controller = Controller(max_turn_angle=30)
+
+    try:
+        while(True):
+            picar.forward(50)
+            data = sensor.read_data()
+            turn_proportion = interpreter.interpret_sensor_reading_discrete(data, threshold=20)
+            #interpreter.interpret_sensor_reading_proportional(data, scaling_function="linear", threshold=25)
+            #interpreter.interpret_sensor_reading_PID(data)
+            controller.set_turn_proportion(turn_proportion)
+            time.sleep(0.1)
+    except:
+        pass
+    
+    
 
 def user_control(picar):
     while(True):
-        selection = input("==========\n0. forward_with_different_steering_angles\n1. backward_with_different_steering_angles\n2. parallel_park_left\n3. parallel_park_right\n4. k_point_turn(k=3)\nSelection: ")
+        selection = input("==========\n-1. Quit\n0. forward_with_different_steering_angles\n1. backward_with_different_steering_angles\n2. parallel_park_left\n3. parallel_park_right\n4. k_point_turn(k=3)\n5. Line Follow\nSelection: ")
         selection = int(selection)
         match(selection):
             case 0:
@@ -189,6 +211,8 @@ def user_control(picar):
                 parallel_park_right(picar)
             case 4:
                 k_point_turn(picar, k=3)
+            case 5:
+                line_follow(picar)
             case _:
                 break
         

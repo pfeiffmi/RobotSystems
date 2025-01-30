@@ -22,7 +22,7 @@ except ImportError:
     from sim_robot_hat import Pin, ADC, PWM, Servo, fileDB
     from sim_robot_hat import Grayscale_Module, Ultrasonic
     #from sim_robot_hat.utils import reset_mcu, run_command
-    from logdecorator import log_on_start, log_on_end, log_on_error
+    #from logdecorator import log_on_start, log_on_end, log_on_error
     on_robot = False
 
 import picarx_tests as tests
