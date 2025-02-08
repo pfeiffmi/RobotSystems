@@ -1,7 +1,7 @@
 import numpy as np
 
 class Interpreter():
-    def __init__(self, line_threshold=35, sensitivity=1.0, is_dark_line=True):
+    def __init__(self, line_threshold=35, sensitivity=1.0, is_dark_line=True, method="grayscale"):
         # class variables
         self.sensitivity = sensitivity
         self.is_dark_line = is_dark_line
@@ -11,8 +11,10 @@ class Interpreter():
         # storage for PID controller
         self.last_error = 0
         self.sum_error = 0
+        # method for interpreter
+        self.method = method
 
-    def interpret_sensor_reading_discrete(self, sensor_reading, threshold=20):
+    def interpret_sensor_reading_discrete(self, sensor_reading):
         if(self.has_no_significant_difference(sensor_reading)):
             if(self.sensor_with_line_last_detected == 1):
                 return(self.prev_turn_proportion)
@@ -117,43 +119,81 @@ class Interpreter():
             else:
                 self.prev_turn_proportion = 1-self.sensor_with_line_last_detected
                 return(1-self.sensor_with_line_last_detected)
-        # referencing: https://www.thorlabs.com/newgrouppage9.cfm?objectgroup_id=9013
-        left_avg = np.mean(sensor_reading[0:2])
-        right_avg = np.mean(sensor_reading[1:3])
-
-        error = left_avg - right_avg
-
-        pid = k_p*(error) + k_i*(self.sum_error + error) + k_d*(error - self.last_error)
-
-        pid *= 0.05
-
-        turn_proportion = 2/(1 + np.exp(-pid)) - 1
-        print(left_avg, '-', right_avg, '=', error)
-        print(pid, '=', turn_proportion)
-
-        self.sum_error += error
-        self.last_error = error
         
-        self.prev_turn_proportion = turn_proportion
-        return(turn_proportion)
+        elif(self.method == "grayscale"):
+            # referencing: https://www.thorlabs.com/newgrouppage9.cfm?objectgroup_id=9013
+            left_avg = np.mean(sensor_reading[0:2])
+            right_avg = np.mean(sensor_reading[1:3])
+
+            error = left_avg - right_avg
+
+            pid = k_p*(error) + k_i*(self.sum_error + error) + k_d*(error - self.last_error)
+
+            pid *= 0.05
+
+            turn_proportion = 2/(1 + np.exp(-pid)) - 1
+            print(left_avg, '-', right_avg, '=', error)
+            print(pid, '=', turn_proportion)
+
+            self.sum_error += error
+            self.last_error = error
+            
+            self.prev_turn_proportion = turn_proportion
+            return(turn_proportion)
+
+        elif(self.method == "vision"):
+            # get the reading that is suspect to be the line
+            center_line_index = np.mean(sensor_reading*np.array(range(0, len(sensor_reading))))
+            error = center_line_index - len(sensor_reading)/2.0
+            
+            pid = k_p*(error) + k_i*(self.sum_error + error) + k_d*(error - self.last_error)
+
+            pid *= 0.05
+
+            turn_proportion = 2/(1 + np.exp(-pid)) - 1
+            print(left_avg, '-', right_avg, '=', error)
+            print(pid, '=', turn_proportion)
+
+            self.sum_error += error
+            self.last_error = error
+            
+            self.prev_turn_proportion = turn_proportion
+            return(turn_proportion)
+            
 
 
     def has_no_significant_difference(self, sensor_reading):
-        # if working with light line, then flip sensor readings such that the max value is the line
-        if(not self.is_dark_line):
-            sensor_reading *= -1
-        # get the reading that is suspect to be the line
-        line_index = np.argmax(sensor_reading)
-        floor_index = [0, 1, 2]
-        floor_index.remove(line_index)
-        # check that the difference of the line reading to the average surrounding reading is at least more than the threshold
-        line_reading = sensor_reading[line_index]
-        avg_floor_reading = np.mean(sensor_reading[floor_index])
-        floor_line_difference = np.abs(line_reading - avg_floor_reading)
-        #return whether the difference is significant
-        if(floor_line_difference <= (self.line_threshold/self.sensitivity)):
-            return(True)
-        else:
-            print(floor_line_difference)
-            self.sensor_with_line_last_detected = line_index
-            return(False)
+        if(self.method == "grayscale"):
+            # if working with light line, then flip sensor readings such that the max value is the line
+            if(not self.is_dark_line):
+                sensor_reading *= -1
+            # get the reading that is suspect to be the line
+            line_index = np.argmax(sensor_reading)
+            floor_index = [0, 1, 2]
+            floor_index.remove(line_index)
+            # check that the difference of the line reading to the average surrounding reading is at least more than the threshold
+            line_reading = sensor_reading[line_index]
+            avg_floor_reading = np.mean(sensor_reading[floor_index])
+            floor_line_difference = np.abs(line_reading - avg_floor_reading)
+            #return whether the difference is significant
+            if(floor_line_difference <= (self.line_threshold/self.sensitivity)):
+                return(True)
+            else:
+                print(floor_line_difference)
+                self.sensor_with_line_last_detected = line_index
+                return(False)
+        
+        elif(self.method == "vision"):
+            # if working with light line, then flip sensor readings such that the max value is the line
+            if(not self.is_dark_line):
+                sensor_reading *= -1
+                sensor_reading += 1
+            #return whether the difference is significant: test the mean activation of all active pixels
+            mean_activation = np.mean(sensor_reading[sensor_reading != 0])
+            if(mean_activation <= ((self.line_threshold/100)/self.sensitivity)):
+                return(True)
+            else:
+                print(mean_activation)
+                max_pixel = np.argmax(sensor_reading) - (len(sensor_reading)/2.0)
+                self.sensor_with_line_last_detected = 0 if(max_pixel < 0) else 2
+                return(False)

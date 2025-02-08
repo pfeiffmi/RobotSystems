@@ -177,39 +177,59 @@ def k_point_turn(picar, k):
     picar.set_dir_servo_angle(0)
     picar.stop()
 
-def line_follow(picar):
-    sensor = Sensor()
+def line_follow(picar, method):
+    sensor = Sensor(method=method)
     interpreter = Interpreter(line_threshold=95, sensitivity=1.0, is_dark_line=True)
-    controller = Controller(max_turn_angle=30)
+    controller = Controller(max_turn_angle=30, init_turn_angle=0, init_tilt_angle=50)
 
     try:
         while(True):
-            picar.forward(30)
-            data = sensor.read_data()
+            if(method == "grayscale"):
+                #picar.forward(30)
+                data = sensor.read_data()
+                
+                #turn_proportion = interpreter.interpret_sensor_reading_discrete(data, threshold=20)
+                
+                #turn_proportion = interpreter.interpret_sensor_reading_proportional(data, scaling_function="cubic", threshold=125)
+                #turn_proportion = interpreter.interpret_sensor_reading_proportional(data, scaling_function="square", threshold=125)
+                #turn_proportion = interpreter.interpret_sensor_reading_proportional(data, scaling_function="linear", threshold=125)
+                #turn_proportion = interpreter.interpret_sensor_reading_proportional(data, scaling_function="sin", threshold=125)
+                #turn_proportion = interpreter.interpret_sensor_reading_proportional(data, scaling_function="logistic", threshold=125)
+                
+                # Oscillation: k_p=0.7, k_i=0.0, k_d=0.0
+                # Mitigated oscillation: k_p=0.35, k_i=0.001, k_d=0.0
+                # Smooth: k_p=0.35, k_i=0.005, k_d=0.02
+                turn_proportion = interpreter.interpret_sensor_reading_PID(data, k_p=0.3, k_i=0.001, k_d=0.02)
+                
+                controller.set_turn_proportion(turn_proportion)
+                time.sleep(0.015)
             
-            #turn_proportion = interpreter.interpret_sensor_reading_discrete(data, threshold=20)
-            
-            #turn_proportion = interpreter.interpret_sensor_reading_proportional(data, scaling_function="cubic", threshold=125)
-            #turn_proportion = interpreter.interpret_sensor_reading_proportional(data, scaling_function="square", threshold=125)
-            #turn_proportion = interpreter.interpret_sensor_reading_proportional(data, scaling_function="linear", threshold=125)
-            #turn_proportion = interpreter.interpret_sensor_reading_proportional(data, scaling_function="sin", threshold=125)
-            #turn_proportion = interpreter.interpret_sensor_reading_proportional(data, scaling_function="logistic", threshold=125)
-            
-            # Oscillation: k_p=0.7, k_i=0.0, k_d=0.0
-            # Mitigated oscillation: k_p=0.35, k_i=0.001, k_d=0.0
-            # Smooth: k_p=0.35, k_i=0.005, k_d=0.02
-            turn_proportion = interpreter.interpret_sensor_reading_PID(data, k_p=0.3, k_i=0.001, k_d=0.02)
-            
-            controller.set_turn_proportion(turn_proportion)
-            time.sleep(0.015)
-    except:
-        pass
-    
+            elif(method == "vision"):
+                #picar.forward(30)
+                data = sensor.read_data()
+                
+                #turn_proportion = interpreter.interpret_sensor_reading_discrete(data)
+                
+                #turn_proportion = interpreter.interpret_sensor_reading_proportional(data, scaling_function="cubic", threshold=125)
+                #turn_proportion = interpreter.interpret_sensor_reading_proportional(data, scaling_function="square", threshold=125)
+                #turn_proportion = interpreter.interpret_sensor_reading_proportional(data, scaling_function="linear", threshold=125)
+                #turn_proportion = interpreter.interpret_sensor_reading_proportional(data, scaling_function="sin", threshold=125)
+                #turn_proportion = interpreter.interpret_sensor_reading_proportional(data, scaling_function="logistic", threshold=125)
+                
+                # Oscillation: k_p=0.7, k_i=0.0, k_d=0.0
+                # Mitigated oscillation: k_p=0.35, k_i=0.001, k_d=0.0
+                # Smooth: k_p=0.35, k_i=0.005, k_d=0.02
+                turn_proportion = interpreter.interpret_sensor_reading_PID(data, k_p=0.3, k_i=0.001, k_d=0.02)
+                
+                controller.set_turn_proportion(turn_proportion)
+                time.sleep(0.05)
+    except Exception as e:
+        print(e)
     
 
 def user_control(picar):
     while(True):
-        selection = input("==========\n-1. Quit\n0. forward_with_different_steering_angles\n1. backward_with_different_steering_angles\n2. parallel_park_left\n3. parallel_park_right\n4. k_point_turn(k=3)\n5. Line Follow\nSelection: ")
+        selection = input("==========\n-1. Quit\n0. forward_with_different_steering_angles\n1. backward_with_different_steering_angles\n2. parallel_park_left\n3. parallel_park_right\n4. k_point_turn(k=3)\n5. Line Follow (Grayscale)\n6. Line Follow (Vision)\nSelection: ")
         selection = int(selection)
         match(selection):
             case 0:
@@ -223,7 +243,9 @@ def user_control(picar):
             case 4:
                 k_point_turn(picar, k=3)
             case 5:
-                line_follow(picar)
+                line_follow(picar, method="grayscale")
+            case 6:
+                line_follow(picar, method="vision")
             case _:
                 break
         
