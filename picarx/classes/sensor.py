@@ -76,9 +76,10 @@ class Sensor():
         self.image = cv2.resize(self.image, self.image_dims)
         self.image = cv2.GaussianBlur(self.image, ksize=(13,13), sigmaX=0)
         
-        _, self.image = cv2.threshold(self.image, thresh=100, maxval=255, type=cv2.THRESH_BINARY_INV)
+        _, self.image = cv2.threshold(self.image, thresh=120, maxval=255, type=cv2.THRESH_BINARY_INV)
+        self.image = self.image/255.0
 
-        data = np.mean(self.image[self.image_dims[0]-50:self.image_dims[0], :], axis=0)
+        data = np.mean(self.image[self.image_dims[0]-25:self.image_dims[0], :], axis=0)
         
         return(data)
     

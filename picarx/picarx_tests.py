@@ -179,13 +179,14 @@ def k_point_turn(picar, k):
 
 def line_follow(picar, method):
     sensor = Sensor(method=method)
-    interpreter = Interpreter(line_threshold=95, sensitivity=1.0, is_dark_line=True)
+    #interpreter = Interpreter(line_threshold=95, sensitivity=1.0, is_dark_line=True, method=method) # for grayscale
+    interpreter = Interpreter(line_threshold=35, sensitivity=1.0, is_dark_line=True, method=method) # for camera vision
     controller = Controller(max_turn_angle=30, init_turn_angle=0, init_tilt_angle=50)
 
     try:
         while(True):
             if(method == "grayscale"):
-                #picar.forward(30)
+                picar.forward(30)
                 data = sensor.read_data()
                 
                 #turn_proportion = interpreter.interpret_sensor_reading_discrete(data, threshold=20)
@@ -205,7 +206,7 @@ def line_follow(picar, method):
                 time.sleep(0.015)
             
             elif(method == "vision"):
-                #picar.forward(30)
+                picar.forward(30)
                 data = sensor.read_data()
                 
                 #turn_proportion = interpreter.interpret_sensor_reading_discrete(data)
@@ -216,13 +217,13 @@ def line_follow(picar, method):
                 #turn_proportion = interpreter.interpret_sensor_reading_proportional(data, scaling_function="sin", threshold=125)
                 #turn_proportion = interpreter.interpret_sensor_reading_proportional(data, scaling_function="logistic", threshold=125)
                 
-                # Oscillation: k_p=0.7, k_i=0.0, k_d=0.0
-                # Mitigated oscillation: k_p=0.35, k_i=0.001, k_d=0.0
-                # Smooth: k_p=0.35, k_i=0.005, k_d=0.02
-                turn_proportion = interpreter.interpret_sensor_reading_PID(data, k_p=0.3, k_i=0.001, k_d=0.02)
+                # Oscillation: k_p=0.025, k_i=0.0, k_d=0.0
+                # Mitigated oscillation: k_p=0.015, k_i=0.005, k_d=0.0
+                # Smooth: k_p=0.02, k_i=0.005, k_d=0.01
+                turn_proportion = interpreter.interpret_sensor_reading_PID(data, k_p=0.03, k_i=0.005, k_d=0.01)
                 
                 controller.set_turn_proportion(turn_proportion)
-                time.sleep(0.05)
+                time.sleep(0.1)
     except Exception as e:
         print(e)
     

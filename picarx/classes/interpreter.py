@@ -20,7 +20,7 @@ class Interpreter():
                 return(self.prev_turn_proportion)
             else:
                 self.prev_turn_proportion = 1-self.sensor_with_line_last_detected
-                return(1-self.sensor_with_line_last_detected)
+                return(self.sensor_with_line_last_detected-1)
 
 
     def get_turn_proportion(self, avg_difference, scaling_function, threshold):
@@ -98,7 +98,7 @@ class Interpreter():
                 return(self.prev_turn_proportion)
             else:
                 self.prev_turn_proportion = 1-self.sensor_with_line_last_detected
-                return(1-self.sensor_with_line_last_detected)
+                return(self.sensor_with_line_last_detected-1)
         
         left_avg = np.mean(sensor_reading[0:2])
         right_avg = np.mean(sensor_reading[1:3])
@@ -117,8 +117,9 @@ class Interpreter():
             if(self.sensor_with_line_last_detected == 1):
                 return(self.prev_turn_proportion)
             else:
-                self.prev_turn_proportion = 1-self.sensor_with_line_last_detected
-                return(1-self.sensor_with_line_last_detected)
+                #self.prev_turn_proportion = 1-self.sensor_with_line_last_detected
+                #print(self.sensor_with_line_last_detected, 1-self.sensor_with_line_last_detected)
+                return(self.sensor_with_line_last_detected-1)
         
         elif(self.method == "grayscale"):
             # referencing: https://www.thorlabs.com/newgrouppage9.cfm?objectgroup_id=9013
@@ -143,16 +144,23 @@ class Interpreter():
 
         elif(self.method == "vision"):
             # get the reading that is suspect to be the line
-            center_line_index = np.mean(sensor_reading*np.array(range(0, len(sensor_reading))))
+            threshold_sensor_readings = np.array(sensor_reading >= (self.line_threshold/100)/self.sensitivity, dtype=np.int16)
+            weighted_values = threshold_sensor_readings*np.array(range(1, len(threshold_sensor_readings)+1))
+            weighted_values = weighted_values[weighted_values != 0]
+            
+            
+            center_line_index = np.mean(weighted_values)
+
             error = center_line_index - len(sensor_reading)/2.0
             
             pid = k_p*(error) + k_i*(self.sum_error + error) + k_d*(error - self.last_error)
 
-            pid *= 0.05
-
             turn_proportion = 2/(1 + np.exp(-pid)) - 1
-            print(left_avg, '-', right_avg, '=', error)
-            print(pid, '=', turn_proportion)
+            print(sensor_reading)
+            print(threshold_sensor_readings)
+            print(weighted_values)
+            print("center_line_ref =", error)
+            print(pid, '->', turn_proportion)
 
             self.sum_error += error
             self.last_error = error
@@ -190,10 +198,27 @@ class Interpreter():
                 sensor_reading += 1
             #return whether the difference is significant: test the mean activation of all active pixels
             mean_activation = np.mean(sensor_reading[sensor_reading != 0])
-            if(mean_activation <= ((self.line_threshold/100)/self.sensitivity)):
+            print("mean_activation =", mean_activation, "<=", (self.line_threshold/100)/self.sensitivity)
+            
+            if(
+                len(sensor_reading[sensor_reading != 0]) == 0 or 
+                mean_activation <= ((self.line_threshold/100)/self.sensitivity)
+            ):
                 return(True)
+            
             else:
-                print(mean_activation)
-                max_pixel = np.argmax(sensor_reading) - (len(sensor_reading)/2.0)
-                self.sensor_with_line_last_detected = 0 if(max_pixel < 0) else 2
+                threshold_sensor_readings = np.array(sensor_reading >= (self.line_threshold/100)/self.sensitivity, dtype=np.int16)
+                weighted_values = threshold_sensor_readings*np.array(range(1, len(threshold_sensor_readings)+1))
+                weighted_values = weighted_values[weighted_values != 0]
+                
+                if(len(weighted_values) == 0):
+                    return(True)
+                
+                center_line_index = np.mean(weighted_values)
+
+                center_pixel = center_line_index - len(sensor_reading)/2.0
+                self.sensor_with_line_last_detected = 0 if(center_pixel < 0) else 2
+                
+                print("Center Pixel =", center_pixel)
+                print("sensor with last line detected =", self.sensor_with_line_last_detected)
                 return(False)
