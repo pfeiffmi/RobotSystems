@@ -27,6 +27,13 @@ class Controller():
         self.tilt_servo = Servo("P1")
         self.tilt_servo.angle(init_tilt_angle)
 
+    
     def set_turn_proportion(self, turn_proportion):
         turn_angle = float(self.max_turn_angle*turn_proportion)
         self.turn_servo.angle(turn_angle)
+
+    
+    def consumer(self, producer_bus_instance, delay_sec):
+        while(True):
+            self.set_turn_proportion(producer_bus_instance.read())
+            time.sleep(delay_sec)

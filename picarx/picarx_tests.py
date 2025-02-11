@@ -1,6 +1,7 @@
 import os
 import sys
 import time
+import concurrent.futures
 
 path = os.path.dirname(os.path.abspath(__file__))
 path = os.path.join(path, "..")
@@ -11,6 +12,7 @@ from picarx_improved import Picarx
 from classes.sensor import Sensor
 from classes.interpreter import Interpreter
 from classes.controller import Controller
+from classes.bus import Bus
 
 def test(picar):
     # =================
@@ -178,14 +180,13 @@ def k_point_turn(picar, k):
     picar.stop()
 
 def line_follow(picar, method):
-    sensor = Sensor(method=method)
-    #interpreter = Interpreter(line_threshold=95, sensitivity=1.0, is_dark_line=True, method=method) # for grayscale
-    interpreter = Interpreter(line_threshold=35, sensitivity=1.0, is_dark_line=True, method=method) # for camera vision
-    controller = Controller(max_turn_angle=30, init_turn_angle=0, init_tilt_angle=50)
-
     try:
-        while(True):
-            if(method == "grayscale"):
+        if(method == "grayscale"):
+            sensor = Sensor(method=method)
+            interpreter = Interpreter(line_threshold=95, sensitivity=1.0, is_dark_line=True, method=method)
+            controller = Controller(max_turn_angle=30, init_turn_angle=0, init_tilt_angle=50)
+
+            while(True):
                 picar.forward(30)
                 data = sensor.read_data()
                 
@@ -204,8 +205,12 @@ def line_follow(picar, method):
                 
                 controller.set_turn_proportion(turn_proportion)
                 time.sleep(0.015)
-            
-            elif(method == "vision"):
+        
+        elif(method == "vision"):
+            sensor = Sensor(method=method)
+            interpreter = Interpreter(line_threshold=35, sensitivity=1.0, is_dark_line=True, method=method)
+            controller = Controller(max_turn_angle=30, init_turn_angle=0, init_tilt_angle=50)
+            while(True):
                 picar.forward(30)
                 data = sensor.read_data()
                 
@@ -226,7 +231,32 @@ def line_follow(picar, method):
                 time.sleep(0.1)
     except Exception as e:
         print(e)
+
+
+def concurrent_line_follow(picar, method):
+    if(method == "grayscale"):
+        sensor = Sensor(method=method)
+        interpreter = Interpreter(line_threshold=35, sensitivity=1.0, is_dark_line=True, method=method)
+        controller = Controller(max_turn_angle=30, init_turn_angle=0, init_tilt_angle=50)
+        producer_bus = Bus(init_message=[0, 0, 0])
+        consumer_bus = Bus(init_message=[0, 0])
+        
+        with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
+            eSensor = executor.submit(sensor.producer, producer_bus, 0.01)
+            eInterpreter = executor.submit(interpreter.producer_consumer, producer_bus, consumer_bus, 0.03)
+            eController = executor.submit(controller.consumer, consumer_bus, 0.05)
     
+    elif(method == "vision"):
+        sensor = Sensor(method=method)
+        interpreter = Interpreter(line_threshold=35, sensitivity=1.0, is_dark_line=True, method=method)
+        controller = Controller(max_turn_angle=30, init_turn_angle=0, init_tilt_angle=50)
+        producer_bus = Bus(init_message=[0, 0, 0])
+        consumer_bus = Bus(init_message=[0, 0])
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
+            eSensor = executor.submit(sensor.producer, producer_bus, 0.075)
+            eInterpreter = executor.submit(interpreter.consumer_producer, producer_bus, consumer_bus, 0.175)
+            eController = executor.submit(controller.consumer, consumer_bus, 0.2)
 
 def user_control(picar):
     while(True):

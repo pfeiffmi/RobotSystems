@@ -1,4 +1,5 @@
 import numpy as np
+import time
 
 class Interpreter():
     def __init__(self, line_threshold=35, sensitivity=1.0, is_dark_line=True, method="grayscale"):
@@ -222,3 +223,10 @@ class Interpreter():
                 print("Center Pixel =", center_pixel)
                 print("sensor with last line detected =", self.sensor_with_line_last_detected)
                 return(False)
+
+
+    def producer_consumer(self, producer_bus_instance, consumer_bus_instance, delay_sec):
+        while(True):
+            message = self.interpret_sensor_reading_PID(self, producer_bus_instance.read(), k_p=0.3, k_i=0.001, k_d=0.02)
+            consumer_bus_instance.write(message)
+            time.sleep(delay_sec)

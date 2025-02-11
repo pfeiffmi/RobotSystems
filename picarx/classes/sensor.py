@@ -93,5 +93,11 @@ class Sensor():
                 break
 
 
+    def producer(self, producer_bus_instance, delay_sec):
+        while(True):
+            producer_bus_instance.write(self.read_data())
+            time.sleep(delay_sec)
+
+
     def __del__(self):
         cv2.destroyAllWindows()
