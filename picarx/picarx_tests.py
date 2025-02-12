@@ -2,6 +2,8 @@ import os
 import sys
 import time
 import concurrent.futures
+import threading
+import numpy as np
 
 path = os.path.dirname(os.path.abspath(__file__))
 path = os.path.join(path, "..")
@@ -234,51 +236,129 @@ def line_follow(picar, method):
 
 
 def concurrent_line_follow(picar, method):
+    # Define shutdown event
+    shutdown_event = threading.Event()
+
+    # Exception handle function: Sensor
+    def handle_exception_sensor(future):
+        exception = future.exception()
+        if exception:
+            print(f"Exception in Sensor worker thread: {exception}")
+
+    # Exception handle function: Interpreter
+    def handle_exception_interpreter(future):
+        exception = future.exception()
+        if exception:
+            print(f"Exception in Interpreter worker thread: {exception}")
+
+    # Exception handle function: Controller
+    def handle_exception_controller(future):
+        exception = future.exception()
+        if exception:
+            print(f"Exception in Controller worker thread: {exception}")
+
     if(method == "grayscale"):
         sensor = Sensor(method=method)
         interpreter = Interpreter(line_threshold=35, sensitivity=1.0, is_dark_line=True, method=method)
         controller = Controller(max_turn_angle=30, init_turn_angle=0, init_tilt_angle=50)
         producer_bus = Bus(init_message=[0, 0, 0])
-        consumer_bus = Bus(init_message=[0, 0])
+        consumer_bus = Bus(init_message=0)
         
+        futures = []
         with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
-            eSensor = executor.submit(sensor.producer, producer_bus, 0.01)
-            eInterpreter = executor.submit(interpreter.producer_consumer, producer_bus, consumer_bus, 0.03)
-            eController = executor.submit(controller.consumer, consumer_bus, 0.05)
+            # create tasks
+            eSensor = executor.submit(sensor.producer, producer_bus, delay_sec=0.01)
+            eInterpreter = executor.submit(interpreter.producer_consumer, producer_bus, consumer_bus, delay_sec=0.03)
+            eController = executor.submit(controller.consumer, consumer_bus, delay_sec=0.05)
+            # add exception callback
+            eSensor.add_done_callback(handle_exception_sensor)
+            eInterpreter.add_done_callback(handle_exception_interpreter)
+            eController.add_done_callback(handle_exception_controller)
+            # append the tasks to the task list
+            futures.append(eSensor)
+            futures.append(eInterpreter)
+            futures.append(eController)
     
     elif(method == "vision"):
         sensor = Sensor(method=method)
         interpreter = Interpreter(line_threshold=35, sensitivity=1.0, is_dark_line=True, method=method)
         controller = Controller(max_turn_angle=30, init_turn_angle=0, init_tilt_angle=50)
-        producer_bus = Bus(init_message=[0, 0, 0])
-        consumer_bus = Bus(init_message=[0, 0])
+        producer_bus = Bus(init_message=np.zeros((100,100)))
+        consumer_bus = Bus(init_message=0)
 
-        with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
-            eSensor = executor.submit(sensor.producer, producer_bus, 0.075)
-            eInterpreter = executor.submit(interpreter.consumer_producer, producer_bus, consumer_bus, 0.175)
-            eController = executor.submit(controller.consumer, consumer_bus, 0.2)
+        futures = []
+        with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
+            eSensor = executor.submit(sensor.producer, producer_bus, delay_sec=0.075)
+            eInterpreter = executor.submit(interpreter.producer_consumer, producer_bus, consumer_bus, delay_sec=0.175)
+            eController = executor.submit(controller.consumer, consumer_bus, delay_sec=0.2)
+            # add exception callback
+            eSensor.add_done_callback(handle_exception_sensor)
+            eInterpreter.add_done_callback(handle_exception_interpreter)
+            eController.add_done_callback(handle_exception_controller)
+            # append the tasks to the task list
+            futures.append(eSensor)
+            futures.append(eInterpreter)
+            futures.append(eController)
+    
+    try:
+        # Set the speed of the car
+        picar.forward(30)
+        # Keep the main thread running to response for the kill signal
+        while(not shutdown_event.is_set()):
+            print(12)
+            time.sleep(1)
+    
+    except KeyboardInterrupt:
+        # Trigger the shutdown event when receive the kill signal
+        print("Shutting down")
+        shutdown_event.set()
+    
+    finally:
+        # Ensures all threads finish
+        executor.shutdown()
 
 def user_control(picar):
     while(True):
-        selection = input("==========\n-1. Quit\n0. forward_with_different_steering_angles\n1. backward_with_different_steering_angles\n2. parallel_park_left\n3. parallel_park_right\n4. k_point_turn(k=3)\n5. Line Follow (Grayscale)\n6. Line Follow (Vision)\nSelection: ")
+        print("==========")
+        print("0. Quit")
+        print("1. forward_with_different_steering_angles")
+        print("2. backward_with_different_steering_angles")
+        print("3. parallel_park_left")
+        print("4. parallel_park_right")
+        print("5. k_point_turn(k=3)")
+        print("6. Line Follow (Grayscale)")
+        print("7. Line Follow (Vision)")
+        print("8. Concurrent Line Follow (Grayscale)")
+        print("9. Concurrent Line Follow (Vision)")
+        print("==========")
+        selection = input("Selection: ")
+        print("==========")
+
         selection = int(selection)
+
         match(selection):
             case 0:
-                forward_with_different_steering_angles(picar)
-            case 1:
-                backward_with_different_steering_angles(picar)
-            case 2:
-                parallel_park_left(picar)
-            case 3:
-                parallel_park_right(picar)
-            case 4:
-                k_point_turn(picar, k=3)
-            case 5:
-                line_follow(picar, method="grayscale")
-            case 6:
-                line_follow(picar, method="vision")
-            case _:
                 break
+            case 1:
+                forward_with_different_steering_angles(picar)
+            case 2:
+                backward_with_different_steering_angles(picar)
+            case 3:
+                parallel_park_left(picar)
+            case 4:
+                parallel_park_right(picar)
+            case 5:
+                k_point_turn(picar, k=3)
+            case 6:
+                line_follow(picar, method="grayscale")
+            case 7:
+                line_follow(picar, method="vision")
+            case 8:
+                concurrent_line_follow(picar, method="grayscale")
+            case 9:
+                concurrent_line_follow(picar, method="vision")
+            case _:
+                continue
         
         picar.set_dir_servo_angle(0)
         picar.stop()

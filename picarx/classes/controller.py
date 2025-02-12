@@ -1,5 +1,11 @@
 import time
 import numpy as np
+import os
+import sys
+
+path = os.path.dirname(os.path.abspath(__file__))
+path = os.path.join(path, "..")
+sys.path.append(path)
 
 try:
     from robot_hat import Pin, ADC, PWM, Servo, fileDB

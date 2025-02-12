@@ -113,7 +113,7 @@ class Interpreter():
         return(turn_proportion)
 
     
-    def interpret_sensor_reading_PID(self, sensor_reading, k_p=1.0, k_i=0.0, k_d=0.0):
+    def interpret_sensor_reading_PID(self, sensor_reading, k_p, k_i, k_d):
         if(self.has_no_significant_difference(sensor_reading)):
             if(self.sensor_with_line_last_detected == 1):
                 return(self.prev_turn_proportion)
@@ -153,7 +153,7 @@ class Interpreter():
             center_line_index = np.mean(weighted_values)
 
             error = center_line_index - len(sensor_reading)/2.0
-            
+
             pid = k_p*(error) + k_i*(self.sum_error + error) + k_d*(error - self.last_error)
 
             turn_proportion = 2/(1 + np.exp(-pid)) - 1
@@ -227,6 +227,7 @@ class Interpreter():
 
     def producer_consumer(self, producer_bus_instance, consumer_bus_instance, delay_sec):
         while(True):
-            message = self.interpret_sensor_reading_PID(self, producer_bus_instance.read(), k_p=0.3, k_i=0.001, k_d=0.02)
+            sensor_data = producer_bus_instance.read()
+            message = self.interpret_sensor_reading_PID(sensor_data, k_p=0.3, k_i=0.001, k_d=0.02)
             consumer_bus_instance.write(message)
             time.sleep(delay_sec)

@@ -1,12 +1,18 @@
 import time
 import numpy as np
-from picamera2 import Picamera2, Preview
 import cv2
+import os
+import sys
+
+path = os.path.dirname(os.path.abspath(__file__))
+path = os.path.join(path, "..")
+sys.path.append(path)
 
 try:
     from robot_hat import Pin, ADC, PWM, Servo, fileDB
     from robot_hat import Grayscale_Module, Ultrasonic
     from robot_hat.utils import reset_mcu, run_command
+    from picamera2 import Picamera2
     on_robot = True
     reset_mcu()
     time.sleep(0.2)
@@ -14,6 +20,7 @@ try:
 except ImportError:
     from sim_robot_hat import Pin, ADC, PWM, Servo, fileDB
     from sim_robot_hat import Grayscale_Module, Ultrasonic
+    from sim_robot_hat.picamera2 import Picamera2
     #from sim_robot_hat.utils import reset_mcu, run_command
     #from logdecorator import log_on_start, log_on_end, log_on_error
     on_robot = False
