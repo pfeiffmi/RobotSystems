@@ -11,7 +11,7 @@ sys.path.append(path)
 
 from picarx_improved import Picarx
 
-from classes.sensor import Sensor
+from classes.line_sensor import LineSensor
 from classes.interpreter import Interpreter
 from classes.controller import Controller
 from classes.bus import Bus
@@ -184,7 +184,7 @@ def k_point_turn(picar, k):
 def line_follow(picar, method):
     try:
         if(method == "grayscale"):
-            sensor = Sensor(method=method)
+            sensor = LineSensor(method=method)
             interpreter = Interpreter(line_threshold=115, sensitivity=1.0, is_dark_line=True, method=method)
             controller = Controller(max_turn_angle=30, init_turn_angle=0, init_tilt_angle=50)
 
@@ -209,7 +209,7 @@ def line_follow(picar, method):
                 time.sleep(0.015)
         
         elif(method == "vision"):
-            sensor = Sensor(method=method)
+            sensor = LineSensor(method=method)
             interpreter = Interpreter(line_threshold=35, sensitivity=1.0, is_dark_line=True, method=method)
             controller = Controller(max_turn_angle=30, init_turn_angle=0, init_tilt_angle=50)
             while(True):
@@ -258,7 +258,7 @@ def concurrent_line_follow(picar, method):
             print(f"Exception in Controller worker thread: {exception}")
 
     if(method == "grayscale"):
-        sensor = Sensor(method=method)
+        sensor = LineSensor(method=method)
         interpreter = Interpreter(line_threshold=115, sensitivity=1.0, is_dark_line=True, method=method)
         controller = Controller(max_turn_angle=30, init_turn_angle=0, init_tilt_angle=0)
         producer_bus = Bus(init_message=np.array([0, 0, 0]))
@@ -296,7 +296,7 @@ def concurrent_line_follow(picar, method):
                 executor.shutdown()
     
     elif(method == "vision"):
-        sensor = Sensor(method=method)
+        sensor = LineSensor(method=method)
         interpreter = Interpreter(line_threshold=35, sensitivity=1.0, is_dark_line=True, method=method)
         controller = Controller(max_turn_angle=30, init_turn_angle=0, init_tilt_angle=50)
         producer_bus = Bus(init_message=np.zeros((100,100)))

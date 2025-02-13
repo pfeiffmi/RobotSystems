@@ -25,7 +25,7 @@ except ImportError:
     #from logdecorator import log_on_start, log_on_end, log_on_error
     on_robot = False
 
-class Sensor():
+class LineSensor():
     def __init__(self, method="grayscale"):
         # set adc structure using self.syntax
         self.method = method
