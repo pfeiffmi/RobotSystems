@@ -177,13 +177,16 @@ class Interpreter():
             if(not self.is_dark_line):
                 sensor_reading *= -1
             # get the reading that is suspect to be the line
-            line_index = np.argmax(sensor_reading)
+            line_index = np.argmin(sensor_reading)
             floor_index = [0, 1, 2]
             floor_index.remove(line_index)
             # check that the difference of the line reading to the average surrounding reading is at least more than the threshold
             line_reading = sensor_reading[line_index]
             avg_floor_reading = np.mean(sensor_reading[floor_index])
             floor_line_difference = np.abs(line_reading - avg_floor_reading)
+
+            print("floor_line_difference =", floor_line_difference, "<=", (self.line_threshold/self.sensitivity))
+
             #return whether the difference is significant
             if(floor_line_difference <= (self.line_threshold/self.sensitivity)):
                 return(True)
@@ -226,8 +229,20 @@ class Interpreter():
 
 
     def producer_consumer(self, producer_bus_instance, consumer_bus_instance, delay_sec):
-        while(True):
-            sensor_data = producer_bus_instance.read()
-            message = self.interpret_sensor_reading_PID(sensor_data, k_p=0.3, k_i=0.001, k_d=0.02)
-            consumer_bus_instance.write(message)
-            time.sleep(delay_sec)
+        if(self.method == "grayscale"):
+            while(True):
+                sensor_data = producer_bus_instance.read()
+                message = self.interpret_sensor_reading_PID(sensor_data, k_p=0.3, k_i=0.001, k_d=0.02)
+                consumer_bus_instance.write(message)
+                time.sleep(delay_sec)
+        
+        elif(self.method == "vision"):
+            while(True):
+                sensor_data = producer_bus_instance.read()
+                message = self.interpret_sensor_reading_PID(sensor_data, k_p=0.015, k_i=0.001, k_d=0.001)
+                consumer_bus_instance.write(message)
+                time.sleep(delay_sec)
+        
+        else:
+            while(True):
+                time.sleep(1)

@@ -185,7 +185,7 @@ def line_follow(picar, method):
     try:
         if(method == "grayscale"):
             sensor = Sensor(method=method)
-            interpreter = Interpreter(line_threshold=95, sensitivity=1.0, is_dark_line=True, method=method)
+            interpreter = Interpreter(line_threshold=115, sensitivity=1.0, is_dark_line=True, method=method)
             controller = Controller(max_turn_angle=30, init_turn_angle=0, init_tilt_angle=50)
 
             while(True):
@@ -226,8 +226,8 @@ def line_follow(picar, method):
                 
                 # Oscillation: k_p=0.025, k_i=0.0, k_d=0.0
                 # Mitigated oscillation: k_p=0.015, k_i=0.005, k_d=0.0
-                # Smooth: k_p=0.02, k_i=0.005, k_d=0.01
-                turn_proportion = interpreter.interpret_sensor_reading_PID(data, k_p=0.03, k_i=0.005, k_d=0.01)
+                # Smooth: k_p=0.015, k_i=0.001, k_d=0.001
+                turn_proportion = interpreter.interpret_sensor_reading_PID(data, k_p=0.015, k_i=0.001, k_d=0.001)
                 
                 controller.set_turn_proportion(turn_proportion)
                 time.sleep(0.1)
@@ -259,17 +259,17 @@ def concurrent_line_follow(picar, method):
 
     if(method == "grayscale"):
         sensor = Sensor(method=method)
-        interpreter = Interpreter(line_threshold=35, sensitivity=1.0, is_dark_line=True, method=method)
-        controller = Controller(max_turn_angle=30, init_turn_angle=0, init_tilt_angle=50)
-        producer_bus = Bus(init_message=[0, 0, 0])
+        interpreter = Interpreter(line_threshold=115, sensitivity=1.0, is_dark_line=True, method=method)
+        controller = Controller(max_turn_angle=30, init_turn_angle=0, init_tilt_angle=0)
+        producer_bus = Bus(init_message=np.array([0, 0, 0]))
         consumer_bus = Bus(init_message=0)
         
         futures = []
         with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
             # create tasks
-            eSensor = executor.submit(sensor.producer, producer_bus, delay_sec=0.01)
-            eInterpreter = executor.submit(interpreter.producer_consumer, producer_bus, consumer_bus, delay_sec=0.03)
-            eController = executor.submit(controller.consumer, consumer_bus, delay_sec=0.05)
+            eSensor = executor.submit(sensor.producer, producer_bus, delay_sec=0.03)
+            eInterpreter = executor.submit(interpreter.producer_consumer, producer_bus, consumer_bus, delay_sec=0.05)
+            eController = executor.submit(controller.consumer, consumer_bus, delay_sec=0.07)
             # add exception callback
             eSensor.add_done_callback(handle_exception_sensor)
             eInterpreter.add_done_callback(handle_exception_interpreter)
@@ -278,6 +278,22 @@ def concurrent_line_follow(picar, method):
             futures.append(eSensor)
             futures.append(eInterpreter)
             futures.append(eController)
+
+            try:
+                # Set the speed of the car
+                picar.forward(30)
+                # Keep the main thread running to response for the kill signal
+                while(not shutdown_event.is_set()):
+                    time.sleep(1)
+    
+            except KeyboardInterrupt:
+                # Trigger the shutdown event when receive the kill signal
+                print("Shutting down")
+                shutdown_event.set()
+    
+            finally:
+                # Ensures all threads finish
+                executor.shutdown()
     
     elif(method == "vision"):
         sensor = Sensor(method=method)
@@ -288,9 +304,9 @@ def concurrent_line_follow(picar, method):
 
         futures = []
         with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
-            eSensor = executor.submit(sensor.producer, producer_bus, delay_sec=0.075)
-            eInterpreter = executor.submit(interpreter.producer_consumer, producer_bus, consumer_bus, delay_sec=0.175)
-            eController = executor.submit(controller.consumer, consumer_bus, delay_sec=0.2)
+            eSensor = executor.submit(sensor.producer, producer_bus, delay_sec=0.07)
+            eInterpreter = executor.submit(interpreter.producer_consumer, producer_bus, consumer_bus, delay_sec=0.11)
+            eController = executor.submit(controller.consumer, consumer_bus, delay_sec=0.13)
             # add exception callback
             eSensor.add_done_callback(handle_exception_sensor)
             eInterpreter.add_done_callback(handle_exception_interpreter)
@@ -300,22 +316,22 @@ def concurrent_line_follow(picar, method):
             futures.append(eInterpreter)
             futures.append(eController)
     
-    try:
-        # Set the speed of the car
-        picar.forward(30)
-        # Keep the main thread running to response for the kill signal
-        while(not shutdown_event.is_set()):
-            print(12)
-            time.sleep(1)
+            try:
+                # Set the speed of the car
+                picar.forward(30)
+                # Keep the main thread running to response for the kill signal
+                while(not shutdown_event.is_set()):
+                    time.sleep(1)
     
-    except KeyboardInterrupt:
-        # Trigger the shutdown event when receive the kill signal
-        print("Shutting down")
-        shutdown_event.set()
+            except KeyboardInterrupt:
+                # Trigger the shutdown event when receive the kill signal
+                print("Shutting down")
+                shutdown_event.set()
     
-    finally:
-        # Ensures all threads finish
-        executor.shutdown()
+            finally:
+                # Ensures all threads finish
+                executor.shutdown()
+
 
 def user_control(picar):
     while(True):
