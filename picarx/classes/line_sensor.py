@@ -52,13 +52,21 @@ class LineSensor():
             self.image_dims = (400, 500)
             self.image = cv2.resize(self.image, self.image_dims)
             self.image = cv2.GaussianBlur(self.image, ksize=(13,13), sigmaX=0)
+        
+        else:
+            raise(Exception("Invalid sensor method used"))
             
     
     def read_data(self):
         if(self.method == "grayscale"):
             data = self.read_grayscale_data()
+        
         elif(self.method == "vision"):
             data = self.read_vision_data()
+        
+        else:
+            raise(Exception("Invalid sensor method used"))
+        
         return(data)
         
 

@@ -168,7 +168,17 @@ class Interpreter():
             
             self.prev_turn_proportion = turn_proportion
             return(turn_proportion)
-            
+
+
+    def interpret_distance(self, sensor_reading):
+        # return linearly scaled speed between 5 and 20
+        if(sensor_reading > 20.0):
+            return(1.0)
+        elif(sensor_reading < 5.0):
+            return(0.0)
+        else:
+            speed_proportion = (sensor_reading-5)/15.0
+            return(speed_proportion)
 
 
     def has_no_significant_difference(self, sensor_reading):
