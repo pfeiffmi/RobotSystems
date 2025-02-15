@@ -1,6 +1,6 @@
 #! /usr/bin/python3
 
-# Taken from Ross Hattan: https://github.com/rlhatton/RossROS/blob/main/rossros.py
+# Taken from Ross Hattan on GitHub: https://github.com/rlhatton/RossROS/blob/main/rossros.py
 
 ##########################
 # MIT License
@@ -29,6 +29,7 @@
 import concurrent.futures
 import time
 import logging
+import collections
 from readerwriterlock import rwlock
 from logdecorator import log_on_start, log_on_end, log_on_error
 
@@ -336,6 +337,10 @@ class Printer(Consumer):
 
             if isinstance(msg, str):                       # If the message is a string, leave it as it is
                 msg_str = msg
+
+            elif isinstance(msg, collections.abc.Iterable):
+                msg_str = str(msg)
+
             else:                                          # If it's not a string, assume it's a number and convert it
                 msg_str = str("{0:.4g}".format(msg))       # Convert to string with 4 significant figures
                 if msg >= 0:                               # Append a space before the value if it is not negative
