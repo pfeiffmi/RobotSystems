@@ -46,7 +46,7 @@ class Controller():
     def set_speed_proportion(self, speed_proportion):
         # have a smooth transition to each speed
         calculated_speed = float(self.max_speed*speed_proportion)
-        self.current_speed = 0.60*self.current_speed + 0.40*calculated_speed
+        self.current_speed = 0.65*self.current_speed + 0.35*calculated_speed
         self.picar.forward(self.current_speed)
     
     def set_turn_proportion(self, turn_proportion):

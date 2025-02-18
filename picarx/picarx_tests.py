@@ -192,7 +192,7 @@ def line_follow(picar, method):
         if(method == "grayscale"):
             sensor = LineSensor(method=method)
             interpreter = Interpreter(line_threshold=115, sensitivity=1.0, is_dark_line=True, method=method)
-            controller = Controller(max_turn_angle=30, init_turn_angle=0, init_tilt_angle=50)
+            controller = Controller(picar, max_turn_angle=30, init_turn_angle=0, init_tilt_angle=50)
 
             while(True):
                 picar.forward(30)
@@ -217,7 +217,7 @@ def line_follow(picar, method):
         elif(method == "vision"):
             sensor = LineSensor(method=method)
             interpreter = Interpreter(line_threshold=35, sensitivity=1.0, is_dark_line=True, method=method)
-            controller = Controller(max_turn_angle=30, init_turn_angle=0, init_tilt_angle=50)
+            controller = Controller(picar, max_turn_angle=30, init_turn_angle=0, init_tilt_angle=50)
             while(True):
                 picar.forward(30)
                 data = sensor.read_data()
@@ -266,7 +266,7 @@ def concurrent_line_follow(picar, method):
     if(method == "grayscale"):
         sensor = LineSensor(method=method)
         interpreter = Interpreter(line_threshold=115, sensitivity=1.0, is_dark_line=True, method=method)
-        controller = Controller(max_turn_angle=30, init_turn_angle=0, init_tilt_angle=0)
+        controller = Controller(picar, max_turn_angle=30, init_turn_angle=0, init_tilt_angle=0)
         producer_bus = Bus(init_message=np.array([0, 0, 0]))
         consumer_bus = Bus(init_message=0)
         
@@ -304,7 +304,7 @@ def concurrent_line_follow(picar, method):
     elif(method == "vision"):
         sensor = LineSensor(method=method)
         interpreter = Interpreter(line_threshold=35, sensitivity=1.0, is_dark_line=True, method=method)
-        controller = Controller(max_turn_angle=30, init_turn_angle=0, init_tilt_angle=50)
+        controller = Controller(picar, max_turn_angle=30, init_turn_angle=0, init_tilt_angle=50)
         producer_bus = Bus(init_message=np.zeros((100,100)))
         consumer_bus = Bus(init_message=0)
 
@@ -351,9 +351,9 @@ def ross_ros_concurrent_line_follow_and_collision_avoidance(picar, method):
 
         # define delays (in seconds)
         line_sensor_read_delay = 0.03
-        distance_sensor_read_delay = 0.11
+        distance_sensor_read_delay = 0.17
         line_interpreter_read_delay = 0.05
-        distance_interpreter_read_delay = 0.13
+        distance_interpreter_read_delay = 0.19
         control_read_delay = 0.07
 
         # define PID gain constants
@@ -362,8 +362,8 @@ def ross_ros_concurrent_line_follow_and_collision_avoidance(picar, method):
         k_d = 0.02
 
         # define bounds of distance reading
-        min_distance_reading = 3.5
-        max_distance_reading = 10.0
+        min_distance_reading = 5.0
+        max_distance_reading = 15.0
 
     # ross ros for concurrent line following using the camera
     elif(method == "vision"):
@@ -375,9 +375,9 @@ def ross_ros_concurrent_line_follow_and_collision_avoidance(picar, method):
 
         # define delays (in seconds)
         line_sensor_read_delay = 0.11
-        distance_sensor_read_delay = 0.11
+        distance_sensor_read_delay = 0.17
         line_interpreter_read_delay = 0.13
-        distance_interpreter_read_delay = 0.13
+        distance_interpreter_read_delay = 0.19
         control_read_delay = 0.17
 
         # define PID gain constants
@@ -386,8 +386,8 @@ def ross_ros_concurrent_line_follow_and_collision_avoidance(picar, method):
         k_d = 0.005
 
         # define bounds of distance reading
-        min_distance_reading = 4.0
-        max_distance_reading = 10.0
+        min_distance_reading = 5.0
+        max_distance_reading = 15.0
 
     # Case for invalid method
     else:

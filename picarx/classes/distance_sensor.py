@@ -50,7 +50,7 @@ class DistanceSensor():
     def read_data(self):
         # case for reading ultrasonic data
         if(self.method == "ultrasonic"):
-            data = self.read_avg_ultrasonic_data(num_samples=7)
+            data = self.read_avg_ultrasonic_data(num_samples=3)
         
         # invalid method to read data from
         else:
@@ -63,26 +63,29 @@ class DistanceSensor():
     def read_avg_ultrasonic_data(self, num_samples):
         # read ultrasonic sensor data 10 times until a proper value is read
         total_distance = 0
-        for i in range(2*num_samples):
+        num_successful_readings = 0
+        for i in range(num_samples):
             # read the ultrasonic distance sensor data
             data = self.read_ultrasonic_data()
             # Case if timeout reached: assume no wall ahead
             if(data == -1):
-                data = self.max_distance_reading_cm
+                continue
             # case if echo pin error occured: assume there is a wall right at head
             elif(data == -2):
-                data = 0
-            # sum the distance reading (only on even index readings as every other sensor reading is corrupt for some reason)
-            print(i, data)
-            if(i % 2 == 0):
-                total_distance += data
-            else:
                 continue
+            # sum the distance reading (only on even index readings as every other sensor reading is corrupt for some reason)
+            if(i % 2 == 0):
+                num_successful_readings += 1
+                total_distance += data
+            # Sleep for some time to give ultrasonic sensor time to reset
+            time.sleep(0.001)
         
-        print("-----")
         # return the average reading
-        average_reading = total_distance/num_samples
-        return(average_reading)
+        if(num_successful_readings > 0):
+            average_reading = total_distance/num_successful_readings
+            return(average_reading)
+        else:
+            return(0)
 
 
     # Code modified from robot_hat/modules.py:Ultrasonic class
@@ -133,4 +136,4 @@ if(__name__ == "__main__"):
     while(True):
         data = sensor.read_data()
         print(data)
-        time.sleep(0.3)
+        time.sleep(0.5)
