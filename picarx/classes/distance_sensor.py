@@ -26,34 +26,97 @@ except ImportError:
     on_robot = False
 
 class DistanceSensor():
-    def __init__(self, method="sonar"):
+    def __init__(self, method="ultrasonic", timeout=0.02):
+        # Set the distance sensor method
         self.method = method
-        if(self.method == "sonar"):
-            pass
-            """
-            self.adc = [ADC(0), ADC(1), ADC(2)]
 
-            self.rotation_index = 0
-            self.num_samples = 3
-            self.num_sensors = 3
-            self.grayscale_data = np.zeros((self.num_samples, self.num_sensors))
-
-            for i in range(self.num_samples):
-                for j in range(self.num_sensors):
-                    self.grayscale_data[i, j] = self.adc[j].read()
-            """
+        # Untrasonic distance sensor
+        if(self.method == "ultrasonic"):
+            # Define the timeout
+            self.timeout = timeout
+            # Define the speed of sound in m per second
+            self.speed_of_sound_m_per_sec = 343.3
+            # Define ultrasonic pins
+            self.trig = Pin("D2")
+            self.echo = Pin("D3", mode=Pin.IN, pull=Pin.PULL_DOWN)
+            # Ensure ultrasonic pins are reset closed
+            self.trig.close()
+            self.echo.close()
         
+        # invalid method specified
         else:
             raise(Exception("Invalid sensor method used"))
         
+
     def read_data(self):
-        if(self.method == "sonar"):
-            data = self.read_sonar_data()
+        # case for reading ultrasonic data
+        if(self.method == "ultrasonic"):
+            # read ultrasonic sensor data 10 times until a proper value is read
+            for i in range(10):
+                # read the ultrasonic distance sensor data
+                data = self.read_ultrasonic_data()
+                # Case if timeout reached
+                if(data == -1):
+                    continue
+                # case if echo pin error occured
+                elif(data == -2):
+                    # break out of loop
+                    break
+                # case is proper ultrasonic sensor data read
+                else:
+                    #return data
+                    return(data)
+            
+            # return error code if echo pin not working or all readings occur in timeout
+            return(-2)
         
+        # invalid method to read data from
         else:
             raise(Exception("Invalid sensor method used"))
         
+        # Return the read data
         return(data)
     
-    def read_sonar_data(self):
-        return(10)
+
+    # Code modified from robot_hat/modules.py:Ultrasonic class
+    def read_ultrasonic_data(self):
+        # Send an initial pulse
+        self.trig.off()
+        time.sleep(0.001)
+        self.trig.on()
+        time.sleep(0.00001)
+        self.trig.off()
+        
+        # Start timer for the timeout for the ultrasonic sensor
+        timeout_start = time.time()
+        
+        # Loop while waiting for trig pin to send the initial pulse (will set echo pin to high when signal is sent)
+        pulse_start = 0
+        while(self.echo.gpio.value == 0):
+            # Update the start time until the pulse is sent and we exit the loop
+            pulse_start = time.time()
+            # Case to determine if timeout has been reached
+            if(pulse_start - timeout_start > self.timeout):
+                return(-1)
+        
+        # Loop while waiting for the detected pulse to end (echo pin will be high until it measures the pulse)
+        pulse_end = 0
+        while(self.echo.gpio.value == 1):
+            # Update the endtime until the pulse is received and we exit the loop
+            pulse_end = time.time()
+            # Case to determine if timeout has been reached
+            if(pulse_end - timeout_start > self.timeout):
+                return(-1)
+        
+        # Check to ensure nothing wrong happend with setting the echo pin (echo had pin value of 0 then 1)
+        if(pulse_start == 0 or pulse_end == 0):
+            return(-2)
+        
+        # Compute the time-of-flight (duration) of the pulse
+        time_of_flight = pulse_end - pulse_start
+
+        # Compute a distance from the pulse time-of-flight
+        distance_m = time_of_flight*(self.speed_of_sound_m_per_sec/2)
+        distance_cm = 100*distance_m
+        return(distance_cm)
+        

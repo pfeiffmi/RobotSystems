@@ -3,6 +3,12 @@ from .basic import _Basic_class
 #import gpiozero  # https://gpiozero.readthedocs.io/en/latest/installing.html
 #from gpiozero import OutputDevice, InputDevice, Button
 
+class Temp():
+    def __init__(self):
+        # define class data members
+        self.value = 0
+        self.pin = -1
+    
 
 class Pin(_Basic_class):
     """Pin manipulation class"""
@@ -86,7 +92,7 @@ class Pin(_Basic_class):
                 f'Pin should be in {self._dict.keys()}, not "{pin}"')
         # setup
         self._value = 0
-        self.gpio = None
+        self.gpio = Temp()
         self.setup(mode, pull)
         self._info("Pin init finished.")
 
@@ -95,8 +101,9 @@ class Pin(_Basic_class):
         pass
 
     def deinit(self):
-        self.gpio.close()
-        self.gpio.pin_factory.close()
+        pass
+        #self.gpio.close()
+        #self.gpio.pin_factory.close()
 
     def setup(self, mode, pull=None):
         """
@@ -182,7 +189,7 @@ class Pin(_Basic_class):
                 self.setup(self.OUT)
             if bool(value):
                 value = 1
-                self.gpio.on()
+                #self.gpio.on()
             else:
                 value = 0
                 #self.gpio.off()
@@ -258,22 +265,24 @@ class Pin(_Basic_class):
         pressed_handler = None
         released_handler = None
         #
-        if not isinstance(self.gpio, Button):
-            if self.gpio != None:
-                self.gpio.close()
-            self.gpio = Button(pin=self._pin_num,
-                               pull_up=_pull_up,
-                               bounce_time=float(bouncetime / 1000))
-            self._bouncetime = bouncetime
-        else:
-            if bouncetime != self._bouncetime:
-                pressed_handler = self.gpio.when_pressed
-                released_handler = self.gpio.when_released
-                self.gpio.close()
-                self.gpio = Button(pin=self._pin_num,
-                                   pull_up=_pull_up,
-                                   bounce_time=float(bouncetime / 1000))
-                self._bouncetime = bouncetime
+        
+        # if not isinstance(self.gpio, Button):
+        #     if self.gpio != None:
+        #         self.gpio.close()
+        #     self.gpio = Button(pin=self._pin_num,
+        #                        pull_up=_pull_up,
+        #                        bounce_time=float(bouncetime / 1000))
+        #     self._bouncetime = bouncetime
+        # else:
+        #     if bouncetime != self._bouncetime:
+        #         pressed_handler = self.gpio.when_pressed
+        #         released_handler = self.gpio.when_released
+        #         self.gpio.close()
+        #         self.gpio = Button(pin=self._pin_num,
+        #                            pull_up=_pull_up,
+        #                            bounce_time=float(bouncetime / 1000))
+        #         self._bouncetime = bouncetime
+
         #
         if trigger in [None, self.IRQ_FALLING]:
             pressed_handler = handler
@@ -284,9 +293,11 @@ class Pin(_Basic_class):
             released_handler = handler
         #
         if pressed_handler is not None:
-            self.gpio.when_pressed = pressed_handler
+            #self.gpio.when_pressed = pressed_handler
+            pass
         if released_handler is not None:
-            self.gpio.when_released = released_handler
+            #self.gpio.when_released = released_handler
+            pass
 
     def name(self):
         """
