@@ -71,7 +71,7 @@ class Picarx(object):
                 servo_pins:list=['P0', 'P1', 'P2'], 
                 motor_pins:list=['D4', 'D5', 'P13', 'P12'],
                 grayscale_pins:list=['A0', 'A1', 'A2'],
-                ultrasonic_pins:list=['D2','D3'],
+                #ultrasonic_pins:list=['D2','D3'],
                 config:str=CONFIG,
                 right_drift_offset=0.0
                 ):
@@ -131,8 +131,8 @@ class Picarx(object):
         self.grayscale.reference(self.line_reference)
 
         # --------- ultrasonic init ---------
-        trig, echo= ultrasonic_pins
-        self.ultrasonic = Ultrasonic(Pin(trig), Pin(echo, mode=Pin.IN, pull=Pin.PULL_DOWN))
+        #trig, echo= ultrasonic_pins
+        #self.ultrasonic = Ultrasonic(Pin(trig), Pin(echo, mode=Pin.IN, pull=Pin.PULL_DOWN))
 
         # --------- Exit command -------------
         atexit.register(self.set_motor_speed, 1, 0)

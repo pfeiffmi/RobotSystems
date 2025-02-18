@@ -37,14 +37,17 @@ class Controller():
         # Define the speed of the car
         self.max_speed=max_speed
         picar.forward(init_speed)
+        self.current_speed = init_speed
 
     def set_picar_parameters(self, angle_proportion, speed_proportion):
         self.set_turn_proportion(angle_proportion)
         self.set_speed_proportion(speed_proportion)
 
     def set_speed_proportion(self, speed_proportion):
-        speed = float(self.max_speed*speed_proportion)
-        self.picar.forward(speed)
+        # have a smooth transition to each speed
+        calculated_speed = float(self.max_speed*speed_proportion)
+        self.current_speed = 0.60*self.current_speed + 0.40*calculated_speed
+        self.picar.forward(self.current_speed)
     
     def set_turn_proportion(self, turn_proportion):
         turn_angle = float(self.max_turn_angle*turn_proportion)

@@ -170,14 +170,14 @@ class Interpreter():
             return(turn_proportion)
 
 
-    def interpret_distance(self, sensor_reading):
-        # return linearly scaled speed between 5 and 20
-        if(sensor_reading > 20.0):
+    def interpret_distance(self, sensor_reading, min_reading = 2.0, max_reading = 6.0):
+        # return linearly scaled speed between min and max reading
+        if(sensor_reading > max_reading):
             return(1.0)
-        elif(sensor_reading < 5.0):
+        elif(sensor_reading < min_reading):
             return(0.0)
         else:
-            speed_proportion = (sensor_reading-5)/15.0
+            speed_proportion = (sensor_reading-min_reading)/max_reading
             return(speed_proportion)
 
 

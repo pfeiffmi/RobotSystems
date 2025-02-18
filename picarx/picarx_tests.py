@@ -346,37 +346,50 @@ def ross_ros_concurrent_line_follow_and_collision_avoidance(picar, method):
         # Instantiate sensor, interpreter, and controller object for sense-think-act architecture
         line_sensor = LineSensor(method=method)
         distance_sensor = DistanceSensor()
-        interpreter = Interpreter(line_threshold=115, sensitivity=1.0, is_dark_line=True, method=method)
+        interpreter = Interpreter(line_threshold=125, sensitivity=1.0, is_dark_line=True, method=method)
         controller = Controller(picar=picar, max_turn_angle=30, init_turn_angle=0, init_tilt_angle=0)
 
         # define delays (in seconds)
-        sensor_read_delay = 0.03
-        interpreter_read_delay = 0.05
+        line_sensor_read_delay = 0.03
+        distance_sensor_read_delay = 0.11
+        line_interpreter_read_delay = 0.05
+        distance_interpreter_read_delay = 0.13
         control_read_delay = 0.07
 
         # define PID gain constants
-        k_p = 0.3
-        k_i = 0.001
+        k_p = 0.20
+        k_i = 0.005
         k_d = 0.02
+
+        # define bounds of distance reading
+        min_distance_reading = 3.5
+        max_distance_reading = 10.0
 
     # ross ros for concurrent line following using the camera
     elif(method == "vision"):
         # Instantiate sensor, interpreter, and controller object for sense-think-act architecture
         line_sensor = LineSensor(method=method)
         distance_sensor = DistanceSensor()
-        interpreter = Interpreter(line_threshold=35, sensitivity=1.0, is_dark_line=True, method=method)
+        interpreter = Interpreter(line_threshold=75, sensitivity=1.0, is_dark_line=True, method=method)
         controller = Controller(picar=picar, max_turn_angle=30, init_turn_angle=0, init_tilt_angle=50)
 
         # define delays (in seconds)
-        sensor_read_delay = 0.07
-        interpreter_read_delay = 0.011
-        control_read_delay = 0.013
+        line_sensor_read_delay = 0.11
+        distance_sensor_read_delay = 0.11
+        line_interpreter_read_delay = 0.13
+        distance_interpreter_read_delay = 0.13
+        control_read_delay = 0.17
 
         # define PID gain constants
         k_p = 0.015
-        k_i = 0.001
-        k_d = 0.001
+        k_i = 0.002
+        k_d = 0.005
 
+        # define bounds of distance reading
+        min_distance_reading = 4.0
+        max_distance_reading = 10.0
+
+    # Case for invalid method
     else:
         raise(Exception(f"Invalid method (\"{method}\") passed to ross_ros_concurrent_line_follow"))
     
@@ -421,6 +434,14 @@ def ross_ros_concurrent_line_follow_and_collision_avoidance(picar, method):
         ), 
         name = "Distance Interpreter Bus"
     )
+    bus_min_distance_reading = rr.Bus(
+        initial_message = min_distance_reading,
+        name = "Min Distance Reading Bus"
+    )
+    bus_max_distance_reading = rr.Bus(
+        initial_message = max_distance_reading,
+        name = "Max Distance Reading Bus"
+    )
     
     # Set bus for termination
     bus_terminate = rr.Bus(
@@ -432,14 +453,14 @@ def ross_ros_concurrent_line_follow_and_collision_avoidance(picar, method):
     read_line_sensor = rr.Producer(
         producer_function = line_sensor.read_data,
         output_buses = bus_line_sensor,
-        delay = sensor_read_delay,
+        delay = line_sensor_read_delay,
         termination_buses = bus_terminate,
         name = "Read line sensor signal"
     )
     read_distance_sensor = rr.Producer(
         producer_function = distance_sensor.read_data,
         output_buses = bus_distance_sensor,
-        delay = sensor_read_delay,
+        delay = distance_sensor_read_delay,
         termination_buses = bus_terminate,
         name = "Read distance sensor signal"
     )
@@ -447,15 +468,15 @@ def ross_ros_concurrent_line_follow_and_collision_avoidance(picar, method):
         consumer_producer_function = interpreter.interpret_sensor_reading_PID,  # function that will generate data
         input_buses = (bus_line_sensor, bus_k_p, bus_k_i, bus_k_d),
         output_buses = bus_line_interpreter,  # output data bus
-        delay = interpreter_read_delay,  # delay between data generation cycles
+        delay = line_interpreter_read_delay,  # delay between data generation cycles
         termination_buses = bus_terminate,  # bus to watch for termination signal
         name = "Read interpreter signal"
     )
     interpret_distance_sensor = rr.ConsumerProducer(
         consumer_producer_function = interpreter.interpret_distance,  # function that will generate data
-        input_buses = bus_distance_sensor,
+        input_buses = (bus_distance_sensor, bus_min_distance_reading, bus_max_distance_reading),
         output_buses = bus_distance_interpreter,  # output data bus
-        delay = interpreter_read_delay,  # delay between data generation cycles
+        delay = distance_interpreter_read_delay,  # delay between data generation cycles
         termination_buses = bus_terminate,  # bus to watch for termination signal
         name = "Read interpreter signal"
     )
@@ -477,7 +498,7 @@ def ross_ros_concurrent_line_follow_and_collision_avoidance(picar, method):
     )
     termination_timer = rr.Timer(
         output_buses = bus_terminate,  # Output data bus
-        duration = 5,  # Duration
+        duration = 15,  # Program duration in seconds
         delay = 0.1,  # Delay between checking for termination time
         termination_buses = bus_terminate,  # Bus to check for termination signal
         name = "Termination timer")  # Name of this timer

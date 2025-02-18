@@ -26,7 +26,7 @@ except ImportError:
     on_robot = False
 
 class DistanceSensor():
-    def __init__(self, method="ultrasonic", timeout=0.02):
+    def __init__(self, method="ultrasonic", timeout=0.01):
         # Set the distance sensor method
         self.method = method
 
@@ -36,12 +36,11 @@ class DistanceSensor():
             self.timeout = timeout
             # Define the speed of sound in m per second
             self.speed_of_sound_m_per_sec = 343.3
+            # Define the max sensor reading (the largest distance possible in cm with the given timeout)
+            self.max_distance_reading_cm = 100*(timeout*self.speed_of_sound_m_per_sec)
             # Define ultrasonic pins
             self.trig = Pin("D2")
             self.echo = Pin("D3", mode=Pin.IN, pull=Pin.PULL_DOWN)
-            # Ensure ultrasonic pins are reset closed
-            self.trig.close()
-            self.echo.close()
         
         # invalid method specified
         else:
@@ -51,24 +50,7 @@ class DistanceSensor():
     def read_data(self):
         # case for reading ultrasonic data
         if(self.method == "ultrasonic"):
-            # read ultrasonic sensor data 10 times until a proper value is read
-            for i in range(10):
-                # read the ultrasonic distance sensor data
-                data = self.read_ultrasonic_data()
-                # Case if timeout reached
-                if(data == -1):
-                    continue
-                # case if echo pin error occured
-                elif(data == -2):
-                    # break out of loop
-                    break
-                # case is proper ultrasonic sensor data read
-                else:
-                    #return data
-                    return(data)
-            
-            # return error code if echo pin not working or all readings occur in timeout
-            return(-2)
+            data = self.read_avg_ultrasonic_data(num_samples=7)
         
         # invalid method to read data from
         else:
@@ -76,7 +58,32 @@ class DistanceSensor():
         
         # Return the read data
         return(data)
-    
+
+
+    def read_avg_ultrasonic_data(self, num_samples):
+        # read ultrasonic sensor data 10 times until a proper value is read
+        total_distance = 0
+        for i in range(2*num_samples):
+            # read the ultrasonic distance sensor data
+            data = self.read_ultrasonic_data()
+            # Case if timeout reached: assume no wall ahead
+            if(data == -1):
+                data = self.max_distance_reading_cm
+            # case if echo pin error occured: assume there is a wall right at head
+            elif(data == -2):
+                data = 0
+            # sum the distance reading (only on even index readings as every other sensor reading is corrupt for some reason)
+            print(i, data)
+            if(i % 2 == 0):
+                total_distance += data
+            else:
+                continue
+        
+        print("-----")
+        # return the average reading
+        average_reading = total_distance/num_samples
+        return(average_reading)
+
 
     # Code modified from robot_hat/modules.py:Ultrasonic class
     def read_ultrasonic_data(self):
@@ -120,3 +127,10 @@ class DistanceSensor():
         distance_cm = 100*distance_m
         return(distance_cm)
         
+
+if(__name__ == "__main__"):
+    sensor = DistanceSensor()
+    while(True):
+        data = sensor.read_data()
+        print(data)
+        time.sleep(0.3)
