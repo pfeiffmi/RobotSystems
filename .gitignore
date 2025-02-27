@@ -1,3 +1,6 @@
 .vscode/*
 build/*
 bk/
+
+*.zip
+*.mp4

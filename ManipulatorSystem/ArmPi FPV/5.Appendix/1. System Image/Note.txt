@@ -1,0 +1,6 @@
+Note:
+Before burning the image, please backup the corresponding documents and data.
+The configuration file of the deviation adjustment is saved in the path, armpi_fpv/src/armpi_fpv_bringup/config/config.yaml. Please be sure to save this file.
+
+Imgaes download link:
+https://drive.google.com/drive/folders/1bEm9-ubh00po0jXxb_Ab5e2YiP3Vbnsy?usp=sharing
