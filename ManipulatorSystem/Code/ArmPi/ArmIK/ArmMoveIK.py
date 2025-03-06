@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # encoding:utf-8
 import sys
-sys.path.append('/home/pi/ArmPi/')
+sys.path.append('/home/pi/RobotSystems/Code/ArmPi/')
 import time
 import numpy as np
 from math import sqrt

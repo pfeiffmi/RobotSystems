@@ -7,10 +7,9 @@ def main():
 
     __target_color = ('red', 'green', 'blue')
     while True:
-        img = perception.get_frame
+        img = perception._get_frame()
         if img is not None:
-            frame = img.copy()
-            Frame = run(frame)           
+            Frame = perception.run(frame)
             cv2.imshow('Frame', Frame)
             key = cv2.waitKey(1)
             if key == 27:

@@ -2,7 +2,7 @@
 # coding=utf8
 import os
 import sys
-sys.path.append('/home/pi/ArmPi/')
+sys.path.append('/home/pi/RobotSystems/Code/ArmPi/')
 import time
 import logging
 import threading
