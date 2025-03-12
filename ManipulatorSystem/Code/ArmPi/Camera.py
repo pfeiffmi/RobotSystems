@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # encoding:utf-8
 import sys
-sys.path.append('/home/pi/RobotSystems/Code/ArmPi/')
+sys.path.append('/home/pi/RobotSystems/ManipulatorSystem/Code/ArmPi/')
 import cv2
 import time
 import threading
