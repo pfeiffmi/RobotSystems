@@ -1,6 +1,7 @@
 .vscode/*
 build/*
 bk/
+__pycache__/
 
 *.zip
 *.mp4
