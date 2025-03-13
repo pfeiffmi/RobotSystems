@@ -1,3 +1,6 @@
+#!/usr/bin/python3
+# coding=utf8
+
 # specify path for other required files
 import sys
 sys.path.append('/home/pi/RobotSystems/ManipulatorSystem/Code/ArmPi/')
