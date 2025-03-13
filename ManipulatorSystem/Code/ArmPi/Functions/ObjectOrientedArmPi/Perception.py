@@ -14,28 +14,11 @@ import CameraCalibration.CalibrationConfig
 class Perception():
     def __init__(self):
         #
-        self.roi = None
-        self.rect = None
-        self.count = None
-        self.get_roi = None
-        self.center_list = None
-        self.unreachable = None
-        self.__isRunning = None
-        self.start_pick_up = None
-        self.rotation_angle = None
-        self.last_x = None
-        self.last_y = None
-        self.world_X = None
-        self.world_Y = None
-        self.start_count_t1 = None
-        self.t1 = None
-        self.detect_color = None
-        self.draw_color = None
-        self.color_list = None
-
         self.size = (640, 480)
         self.square_length = CameraCalibration.CalibrationConfig.square_length
 
+        #
+        self.color_list = ("red", "green", "blue")
         #
         self.range_rgb = {
             'red': (0, 0, 255),
@@ -102,7 +85,35 @@ class Perception():
         # return the contour with the largest area and its corresponding area
         return(max_area_contour, max_area)
 
-    def run(self, img, color):
+    def _get_position_vector(self, rect, roi):
+        # get the x, y centroid with respect to the world coordinate system (origin is center-camera)
+        img_centerx, img_centery = getCenter(rect, roi, self.size, self.square_length)
+        world_x, world_y = convertCoordinate(img_centerx, img_centery, self.size)
+        # get the width and height
+        width, height = rect[1]
+        rotation_angle = rect[2]
+        # Define the position vector
+        position_vector = ((world_x, world_y), (width, height), rotation_angle)
+        # return the position vector
+        return(position_vector)
+
+    def draw_bb_on_image(self, img, box, position_vector, color):
+        # Get the color to draw
+        draw_color = self.range_rgb[color]
+        # Draw the contour as defined by the bb
+        cv2.drawContours(img, [box], -1, draw_color, 2)
+        # draw 
+        cv2.putText(
+            img,
+            f"({position_vector[0][0]:.2f}, {position_vector[0][1]:.2f}), ({position_vector[1][0]:.2f}, {position_vector[1][1]:.2f}), {position_vector[2]:.2f}",
+            (min(box[0, 0], box[2, 0]), box[2, 1] - 10),
+            cv2.FONT_HERSHEY_SIMPLEX, 
+            0.5, 
+            draw_color, 
+            1
+        )
+
+    def run_color(self, img, color):
         # preproccess the image to be better suited for color detection
         preprocessed_img = self._preprocess_img(img.copy())
         # get the mask using the specific color from the pre-processed image
@@ -112,57 +123,60 @@ class Perception():
         
         # proceed if the area of the max contour is larger than 2500 square pixels
         if(area > 2500):
-
-            self.rect = cv2.minAreaRect(contour)
-            self.box = np.int0(cv2.boxPoints(self.rect))
-            self.roi = getROI(self.box)
-
-            img_centerx, img_centery = getCenter(self.rect, self.roi, self.size, self.square_length)
-            world_x, world_y = convertCoordinate(img_centerx, img_centery, self.size)
-            
-            draw_color = self.range_rgb[color]
-
-            cv2.drawContours(img, [self.box], -1, draw_color, 2)
-            
-            cv2.putText(
-                img, 
-                '(' + str(world_x) + ',' + str(world_y) + ')', 
-                (min(self.box[0, 0], self.box[2, 0]), self.box[2, 1] - 10),
-                cv2.FONT_HERSHEY_SIMPLEX, 
-                0.5, 
-                draw_color, 
-                1
-            )
-
-            rotation_angle = self.rect[2] 
-        else:
-            draw_color = (0,0,0)
-            color = "None"
+            # Compute the bounding box
+            rect = cv2.minAreaRect(contour)
+            box = np.int0(cv2.boxPoints(rect))
+            roi = getROI(box)
+            # compute the position vector
+            position_vector = self._get_position_vector(rect, roi)
+            # draw the bounding box on the image
+            self.draw_bb_on_image(img, box, position_vector, color)
         
-        #cv2.rectangle(img, (5, img.shape[0] - 30), (150, img.shape[0] - 5), (255, 255, 255), -1)
-        #cv2.putText(img, "Color: " + color, (10, img.shape[0] - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.65, draw_color, 2)
-        return img
+        # if contour too small, specify a Null position vector
+        else:
+            position_vector = None
+        
+        # return the image and the position vector
+        return(img, position_vector)
     
+    def run(self):
+        # Initiallize the position dictionary
+        position_dict = dict()
+        # get the frame
+        frame = perception.get_frame()
+        # check if it is a valid frame
+        if(frame is not None):
+            # loop through each specified color
+            for color in self.color_list:
+                # get the labeled frame and position of the perception code for each object
+                frame, position = perception.run_color(frame, color)
+                position_dict[color] = position
+        # return the labelled frame and position dictionary
+        return(frame, position_dict)
+
     def __del__(self):
         self.camera.camera_close()
 
 
 if __name__ == '__main__':
+    # Start the perception object
     perception = Perception()
     perception.start()
 
-    color_list = ("red", "green", "blue")
-
+    # Continuous loop
     while True:
-        frame = perception.get_frame()
-        if(frame is not None):
-            for color in color_list:
-                frame = perception.run(frame, color)
-            
-            cv2.imshow('Frame', frame)
-            
-            key = cv2.waitKey(1)
-            if key == 27:
-                break
-    
+        # get the labelled frame and position dictionary from running the perception object
+        frame_labelled, position_dictionary = perception.run()
+        # restart the loop if the frame was not captured
+        if(frame_labelled is None):
+            # stall a bit to not use resources
+            time.sleep(0.01)
+            continue
+        # Display the frame (press [ESC] to quit)
+        cv2.imshow('Frame (Labelled)', frame_labelled)
+        key = cv2.waitKey(1)
+        if key == 27:
+            break
+
+    # Destroy the CV2 window
     cv2.destroyAllWindows()
