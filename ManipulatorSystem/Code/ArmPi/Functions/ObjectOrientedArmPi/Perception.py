@@ -1,16 +1,20 @@
+# specify path for other required files
 import sys
 sys.path.append('/home/pi/RobotSystems/ManipulatorSystem/Code/ArmPi/')
+
+# import python libraries
 import cv2
 import time
 import Camera
+import math
+import numpy as np
 
-import threading
+# import local files
 import LABConfig
-from ArmIK.Transform import *
-from ArmIK.ArmMoveIK import *
-import HiwonderSDK.Board as Board
+from ArmIK import Transform
 import CameraCalibration.CalibrationConfig
 
+# Class for detection of colored cubes in the camera view
 class Perception():
     def __init__(self):
         #
@@ -87,8 +91,8 @@ class Perception():
 
     def _get_position_vector(self, rect, roi):
         # get the x, y centroid with respect to the world coordinate system (origin is center-camera)
-        img_centerx, img_centery = getCenter(rect, roi, self.size, self.square_length)
-        world_x, world_y = convertCoordinate(img_centerx, img_centery, self.size)
+        img_centerx, img_centery = Transform.getCenter(rect, roi, self.size, self.square_length)
+        world_x, world_y = Transform.convertCoordinate(img_centerx, img_centery, self.size)
         # get the width and height
         width, height = rect[1]
         rotation_angle = rect[2]
@@ -126,7 +130,7 @@ class Perception():
             # Compute the bounding box
             rect = cv2.minAreaRect(contour)
             box = np.int0(cv2.boxPoints(rect))
-            roi = getROI(box)
+            roi = Transform.getROI(box)
             # compute the position vector
             position_vector = self._get_position_vector(rect, roi)
             # draw the bounding box on the image
@@ -143,22 +147,24 @@ class Perception():
         # Initiallize the position dictionary
         position_dict = dict()
         # get the frame
-        frame = perception.get_frame()
+        frame = self.get_frame()
         # check if it is a valid frame
         if(frame is not None):
             # loop through each specified color
             for color in self.color_list:
                 # get the labeled frame and position of the perception code for each object
-                frame, position = perception.run_color(frame, color)
+                frame, position = self.run_color(frame, color)
                 position_dict[color] = position
         # return the labelled frame and position dictionary
         return(frame, position_dict)
 
     def __del__(self):
+        # close the camera on object destruction
         self.camera.camera_close()
 
 
-if __name__ == '__main__':
+# main function to test perception class
+def main():
     # Start the perception object
     perception = Perception()
     perception.start()
@@ -180,3 +186,8 @@ if __name__ == '__main__':
 
     # Destroy the CV2 window
     cv2.destroyAllWindows()
+
+
+# Specify execution of main function when file is ran directly
+if __name__ == '__main__':
+    main()
