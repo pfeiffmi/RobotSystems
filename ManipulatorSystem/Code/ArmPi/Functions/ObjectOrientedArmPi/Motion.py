@@ -3,41 +3,33 @@
 
 import sys
 sys.path.append('/home/pi/RobotSystems/ManipulatorSystem/Code/ArmPi/')
-import cv2
+
 import time
-import Camera
-import threading
+import numpy as np
 
-from LABConfig import *
-
-from ArmIK.Transform import *
-from ArmIK.ArmMoveIK import *
+from ArmIK import Transform
+from ArmIK import ArmMoveIK
 import HiwonderSDK.Board as Board
-from CameraCalibration.CalibrationConfig import *
+
 
 class Motion():
     def __init__(self):
-        # Declare class variabels
-        self.count = None
-        self.track = None
-        self._stop = None
-        self.get_roi = None
-        self.first_move = None
-        self.center_list = None
-        self.__isRunning = None
-        self.detect_color = None
-        self.action_finish = None
-        self.start_pick_up = None
-        self.__target_color = None
-        self.start_count_t1 = None
-
-        #
-        self.AK = ArmIK()
-
+        # define how far up to grab the cube
+        self.cube_grab_from_bottom_cm = 1.0
+        # coordinates for colored cube placement
+        self.home_coordinate = {
+            "red":   (-15.5, 12.5, self.cube_grab_from_bottom_cm),
+            "green": (-15.5, 6.5,  self.cube_grab_from_bottom_cm),
+            "blue":  (-15.5, 0.5,  self.cube_grab_from_bottom_cm),
+        }
+        # set an offset for the world coordinates
+        self.offset_world_xy = np.array([1.5, 0.25])
+        # arm inverse kinematics object
+        self.AK = ArmMoveIK.ArmIK()
         # Settings for the arm's motion
-        Board.setBusServoPulse(1, servo1 - 50, 300)
-        Board.setBusServoPulse(2, 500, 500)
-        self.AK.setPitchRangeMoving((0, 10, 10), -30, -30, -90, 1500)
+        self.servo1 = 500
+        # reset the arms position
+        self.reset_position()
 
     def _reset(self):
         # Initiallize class variables
@@ -53,112 +45,118 @@ class Motion():
         self.start_pick_up = False
         self.start_count_t1 = True
 
-
     def start(self):
         # reset the class variables
         self._reset()
-        # note that the robot is currently running
-        self.__isRunning = True
+        self.reset_position()
 
-    
-    def move():
-        global rect
-        global _stop
-        global get_roi
-        global unreachable
-        global __isRunning
-        global detect_color
-        global start_pick_up
-        global rotation_angle
-        global world_X, world_Y
+    def reset_position(self):
+        Board.setBusServoPulse(1, self.servo1 - 50, 300)
+        Board.setBusServoPulse(2, 500, 500)
+        self.AK.setPitchRangeMoving((0, 10, 10), -30, -30, -90, 1500)
+        time.sleep(1)
+
+    def run(self, color_of_interest, position_vector):
+        # ensure that the color or position vector is not 'None'
+        if((color_of_interest == "None") or (position_vector is None)):
+            return
+        # get the individual measures from the position vector
+        world_X, world_Y = np.array(position_vector[0]) + self.offset_world_xy
+        width, height = position_vector[1]
+        rotation_angle = position_vector[2]
+        # get color home coordinates
+        color_home_X, color_home_Y, color_home_Z = self.home_coordinate[color_of_interest]
         
-        #放置坐标
-        coordinate = {
-            'red':   (-15 + 0.5, 12 - 0.5, 1.5),
-            'green': (-15 + 0.5, 6 - 0.5,  1.5),
-            'blue':  (-15 + 0.5, 0 - 0.5,  1.5),
-        }
-        while True:
-            if __isRunning:        
-                if detect_color != 'None' and start_pick_up:  #如果检测到方块没有移动一段时间后，开始夹取
-                    #移到目标位置，高度6cm, 通过返回的结果判断是否能到达指定位置
-                    #如果不给出运行时间参数，则自动计算，并通过结果返回
-                    set_rgb(detect_color)
-                    setBuzzer(0.1)
-                    result = AK.setPitchRangeMoving((world_X, world_Y, 7), -90, -90, 0)  
-                    if result == False:
-                        unreachable = True
-                    else:
-                        unreachable = False
-                        time.sleep(result[2]/1000) #如果可以到达指定位置，则获取运行时间
+        # phase 0 - move end-effector to hover 7cm above the object
+        servos, alpha, movetime_ms = self.AK.setPitchRangeMoving(
+            coordinate_data = (world_X, world_Y, 7), 
+            alpha = -90, 
+            alpha1 = -90, 
+            alpha2 = 0,
+            movetime = None
+        )
+        time.sleep(movetime_ms/1000)
 
-                        if not __isRunning:
-                            continue
-                        servo2_angle = getAngle(world_X, world_Y, rotation_angle) #计算夹持器需要旋转的角度
-                        Board.setBusServoPulse(1, servo1 - 280, 500)  # 爪子张开
-                        Board.setBusServoPulse(2, servo2_angle, 500)
-                        time.sleep(0.5)
-                        
-                        if not __isRunning:
-                            continue
-                        AK.setPitchRangeMoving((world_X, world_Y, 1.5), -90, -90, 0, 1000)
-                        time.sleep(1.5)
+        # phase 1 - rotate the end-effector to match the cube rotation and open the claw
+        servo2_angle = Transform.getAngle(world_X, world_Y, rotation_angle) #calculate gripper angle rotation
+        Board.setBusServoPulse(1, self.servo1 - 280, 500)  # open claw
+        Board.setBusServoPulse(2, servo2_angle, 500)
+        time.sleep(0.5)
+        
+        # phase 2 - move toward object, with end-effector being half the height of the block (1.5 cm high)
+        servos, alpha, movetime_ms = self.AK.setPitchRangeMoving(
+            coordinate_data = (world_X, world_Y, self.cube_grab_from_bottom_cm), 
+            alpha = -90, 
+            alpha1 = -90, 
+            alpha2 = 0, 
+            movetime = 1000
+        )
+        time.sleep(movetime_ms/1000)
 
-                        if not __isRunning:
-                            continue
-                        Board.setBusServoPulse(1, servo1, 500)  #夹持器闭合
-                        time.sleep(0.8)
+        # phase 3 - close the claw
+        Board.setBusServoPulse(1, self.servo1, 500)  # close claw
+        time.sleep(0.8)
 
-                        if not __isRunning:
-                            continue
-                        Board.setBusServoPulse(2, 500, 500)
-                        AK.setPitchRangeMoving((world_X, world_Y, 12), -90, -90, 0, 1000)  #机械臂抬起
-                        time.sleep(1)
+        # phase 4 - raise arm up with cube in hand to 12 cm high
+        Board.setBusServoPulse(2, 500, 500)
+        servos, alpha, movetime_ms = self.AK.setPitchRangeMoving(
+            coordinate_data = (world_X, world_Y, 12), 
+            alpha = -90, 
+            alpha1 = -90, 
+            alpha2 = 0, 
+            movetime = 1000
+        )
+        time.sleep(movetime_ms/1000)
 
-                        if not __isRunning:
-                            continue
-                        result = AK.setPitchRangeMoving((coordinate[detect_color][0], coordinate[detect_color][1], 12), -90, -90, 0)   
-                        time.sleep(result[2]/1000)
-                        
-                        if not __isRunning:
-                            continue                   
-                        servo2_angle = getAngle(coordinate[detect_color][0], coordinate[detect_color][1], -90)
-                        Board.setBusServoPulse(2, servo2_angle, 500)
-                        time.sleep(0.5)
+        # phase 5 - move arm with cube 12 cm above the color's home position
+        servos, alpha, movetime_ms = self.AK.setPitchRangeMoving(
+            coordinate_data = (color_home_X, color_home_Y, 12), 
+            alpha = -90, 
+            alpha1 = -90, 
+            alpha2 = 0,
+            movetime = None
+        )
+        time.sleep(movetime_ms/1000)
+        
+        # phase 6 - adjust the claw's hand angle to line up with the home base
+        servo2_angle = Transform.getAngle(color_home_X, color_home_Y, -90)
+        Board.setBusServoPulse(2, servo2_angle, 500)
+        time.sleep(0.5)
 
-                        if not __isRunning:
-                            continue
-                        AK.setPitchRangeMoving((coordinate[detect_color][0], coordinate[detect_color][1], coordinate[detect_color][2] + 3), -90, -90, 0, 500)
-                        time.sleep(0.5)
-                        
-                        if not __isRunning:
-                            continue                    
-                        AK.setPitchRangeMoving((coordinate[detect_color]), -90, -90, 0, 1000)
-                        time.sleep(0.8)
+        # phase 7 - move arm 3 inches above normal cube home postion
+        servos, alpha, movetime_ms = self.AK.setPitchRangeMoving(
+            coordinate_data = (color_home_X, color_home_Y, color_home_Z+3), 
+            alpha = -90, 
+            alpha1 = -90, 
+            alpha2 = 0, 
+            movetime = 500
+        )
+        time.sleep(movetime_ms/1000)
+        
+        # phase 8 - slowly move cube to its home position
+        servos, alpha, movetime_ms = self.AK.setPitchRangeMoving(
+            coordinate_data = (color_home_X, color_home_Y, color_home_Z), 
+            alpha = -90, 
+            alpha1 = -90, 
+            alpha2 = 0, 
+            movetime = 1000
+        )
+        time.sleep(movetime_ms/1000)
 
-                        if not __isRunning:
-                            continue
-                        Board.setBusServoPulse(1, servo1 - 200, 500)  # 爪子张开  ，放下物体
-                        time.sleep(0.8)
+        # phase 9 - open the claw
+        Board.setBusServoPulse(1, self.servo1 - 200, 500)
+        time.sleep(0.8)
 
-                        if not __isRunning:
-                            continue
-                        AK.setPitchRangeMoving((coordinate[detect_color][0], coordinate[detect_color][1], 12), -90, -90, 0, 800)
-                        time.sleep(0.8)
+        # phase 10 - move to 12 cm above home position
+        servos, alpha, movetime_ms = self.AK.setPitchRangeMoving(
+            coordinate_data = (color_home_X, color_home_Y, 12), 
+            alpha = -90, 
+            alpha1 = -90, 
+            alpha2 = 0, 
+            movetime = 800
+        )
+        time.sleep(movetime_ms/1000)
 
-                        initMove()  # 回到初始位置
-                        time.sleep(1.5)
-
-                        detect_color = 'None'
-                        get_roi = False
-                        start_pick_up = False
-                        set_rgb(detect_color)
-            else:
-                if _stop:
-                    _stop = False
-                    Board.setBusServoPulse(1, servo1 - 70, 300)
-                    time.sleep(0.5)
-                    Board.setBusServoPulse(2, 500, 500)
-                    AK.setPitchRangeMoving((0, 10, 10), -30, -30, -90, 1500)
-                    time.sleep(1.5)
-                time.sleep(0.01)
+        # phase 11 - reset the arm position to its default state
+        self.reset_position()
+        time.sleep(1.5)
