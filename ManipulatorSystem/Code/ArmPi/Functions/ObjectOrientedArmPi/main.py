@@ -26,7 +26,7 @@ def main():
         # move the arm to sort the colors
         for color in position_dictionary.keys():
             print(f"Getting {color}")
-            motion.run(color, position_dictionary[color])
+            motion.run(color, position_dictionary[color], speed=3.5)
 
 if(__name__ == "__main__"):
     main()

@@ -50,13 +50,13 @@ class Motion():
         self._reset()
         self.reset_position()
 
-    def reset_position(self):
-        Board.setBusServoPulse(1, self.servo1 - 50, 300)
-        Board.setBusServoPulse(2, 500, 500)
-        self.AK.setPitchRangeMoving((0, 10, 10), -30, -30, -90, 1500)
-        time.sleep(1)
+    def reset_position(self, reset_time_ms=1500):
+        Board.setBusServoPulse(1, self.servo1 - 50, min(300, reset_time_ms))
+        Board.setBusServoPulse(2, 500, min(500, reset_time_ms))
+        self.AK.setPitchRangeMoving((0, 10, 10), -30, -30, -90, reset_time_ms)
+        time.sleep(reset_time_ms/1000)
 
-    def run(self, color_of_interest, position_vector):
+    def run(self, color_of_interest, position_vector, speed=1.0):
         # ensure that the color or position vector is not 'None'
         if((color_of_interest == "None") or (position_vector is None)):
             return
@@ -73,14 +73,14 @@ class Motion():
             alpha = -90, 
             alpha1 = -90, 
             alpha2 = 0,
-            movetime = None
+            movetime = int(1500/speed)
         )
         time.sleep(movetime_ms/1000)
 
         # phase 1 - rotate the end-effector to match the cube rotation and open the claw
         servo2_angle = Transform.getAngle(world_X, world_Y, rotation_angle) #calculate gripper angle rotation
-        Board.setBusServoPulse(1, self.servo1 - 280, 500)  # open claw
-        Board.setBusServoPulse(2, servo2_angle, 500)
+        Board.setBusServoPulse(1, self.servo1 - 280, int(500/speed))  # open claw
+        Board.setBusServoPulse(2, servo2_angle, int(500/speed))
         time.sleep(0.5)
         
         # phase 2 - move toward object, with end-effector being half the height of the block (1.5 cm high)
@@ -89,22 +89,22 @@ class Motion():
             alpha = -90, 
             alpha1 = -90, 
             alpha2 = 0, 
-            movetime = 1000
+            movetime = int(1000/speed)
         )
         time.sleep(movetime_ms/1000)
 
         # phase 3 - close the claw
-        Board.setBusServoPulse(1, self.servo1, 500)  # close claw
-        time.sleep(0.8)
+        Board.setBusServoPulse(1, self.servo1, int(500/speed))  # close claw
+        time.sleep(0.8/speed)
 
         # phase 4 - raise arm up with cube in hand to 12 cm high
-        Board.setBusServoPulse(2, 500, 500)
+        Board.setBusServoPulse(2, 500, int(500/speed))
         servos, alpha, movetime_ms = self.AK.setPitchRangeMoving(
             coordinate_data = (world_X, world_Y, 12), 
             alpha = -90, 
             alpha1 = -90, 
             alpha2 = 0, 
-            movetime = 1000
+            movetime = int(1000/speed)
         )
         time.sleep(movetime_ms/1000)
 
@@ -114,14 +114,14 @@ class Motion():
             alpha = -90, 
             alpha1 = -90, 
             alpha2 = 0,
-            movetime = None
+            movetime = int(1500/speed)
         )
         time.sleep(movetime_ms/1000)
         
         # phase 6 - adjust the claw's hand angle to line up with the home base
         servo2_angle = Transform.getAngle(color_home_X, color_home_Y, -90)
-        Board.setBusServoPulse(2, servo2_angle, 500)
-        time.sleep(0.5)
+        Board.setBusServoPulse(2, servo2_angle, int(500/speed))
+        time.sleep(0.5/speed)
 
         # phase 7 - move arm 3 inches above normal cube home postion
         servos, alpha, movetime_ms = self.AK.setPitchRangeMoving(
@@ -129,7 +129,7 @@ class Motion():
             alpha = -90, 
             alpha1 = -90, 
             alpha2 = 0, 
-            movetime = 500
+            movetime = int(500/speed)
         )
         time.sleep(movetime_ms/1000)
         
@@ -139,13 +139,13 @@ class Motion():
             alpha = -90, 
             alpha1 = -90, 
             alpha2 = 0, 
-            movetime = 1000
+            movetime = int(1000/speed)
         )
         time.sleep(movetime_ms/1000)
 
         # phase 9 - open the claw
-        Board.setBusServoPulse(1, self.servo1 - 200, 500)
-        time.sleep(0.8)
+        Board.setBusServoPulse(1, self.servo1 - 200, int(500/speed))
+        time.sleep(0.8/speed)
 
         # phase 10 - move to 12 cm above home position
         servos, alpha, movetime_ms = self.AK.setPitchRangeMoving(
@@ -153,10 +153,10 @@ class Motion():
             alpha = -90, 
             alpha1 = -90, 
             alpha2 = 0, 
-            movetime = 800
+            movetime = int(800/speed)
         )
         time.sleep(movetime_ms/1000)
 
         # phase 11 - reset the arm position to its default state
-        self.reset_position()
+        self.reset_position(reset_time_ms=750)
         time.sleep(1.5)
