@@ -157,7 +157,8 @@ class Perception():
             for color in self.color_list:
                 # get the labeled frame and position of the perception code for each object
                 frame, position = self.run_color(frame, color)
-                position_dict[color] = position
+                if(position is not None):
+                    position_dict[color] = position
         # return the labelled frame and position dictionary
         return(frame, position_dict)
 
